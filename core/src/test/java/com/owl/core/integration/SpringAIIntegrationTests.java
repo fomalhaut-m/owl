@@ -32,18 +32,24 @@ class SpringAIIntegrationTests {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
         
         // 使用正确的 OpenAiApi 构造函数
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi, 
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo") // 或者使用支持的模型
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo") // 或者使用支持的模型
+                .build())
+            .build();
 
         String userInput = "你好，请简单介绍一下你自己";
         
         Prompt prompt = new Prompt(userInput);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.length() > 0, "响应内容长度应大于0");
@@ -55,11 +61,17 @@ class SpringAIIntegrationTests {
     void testLLMWithTools() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String toolsJson = """
             [
@@ -89,7 +101,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(userInput);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         System.out.println("大模型 Tools 调用结果: " + result);
@@ -100,11 +112,17 @@ class SpringAIIntegrationTests {
     void testLLMWithMBTIExpertSkills() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String mbtiExpertPrompt = """
             你是专业的MBTI人格分析专家，具有以下特征：
@@ -122,7 +140,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(fullPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.toLowerCase().contains("mbti"), "响应应包含MBTI相关内容");
@@ -134,11 +152,17 @@ class SpringAIIntegrationTests {
     void testLLMWithMBTIAndMemorySkills() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String combinedPrompt = """
             你是专业的MBTI人格分析专家和记忆整理助手，具备以下能力：
@@ -160,7 +184,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(combinedPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("整理") || result.contains("要点"), "响应应包含记忆整理相关内容");
@@ -172,11 +196,17 @@ class SpringAIIntegrationTests {
     void testGoalDecompositionPlan() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String goalDecompositionPrompt = """
             请使用目标拆解计划来帮助我完成以下任务：
@@ -197,7 +227,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(goalDecompositionPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("1.") && result.contains("2."), "响应应包含分步骤内容");
@@ -209,11 +239,17 @@ class SpringAIIntegrationTests {
     void testToolCallPlan() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String toolCallPlanPrompt = """
             请制定一个工具调用计划来解决以下问题：
@@ -232,7 +268,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(toolCallPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("工具") || result.contains("调用"), "响应应包含工具调用相关内容");
@@ -244,11 +280,17 @@ class SpringAIIntegrationTests {
     void testReflectionPlan() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String reflectionPlanPrompt = """
             请使用反思修正计划来分析以下情况：
@@ -269,7 +311,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(reflectionPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("分析") && result.contains("改进"), "响应应包含分析和改进内容");
@@ -281,11 +323,17 @@ class SpringAIIntegrationTests {
     void testConversationPlan() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String conversationPlanPrompt = """
             请设计一个多轮对话推进计划来完成以下任务：
@@ -305,7 +353,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(conversationPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("对话") || result.contains("阶段"), "响应应包含对话阶段内容");
@@ -317,11 +365,17 @@ class SpringAIIntegrationTests {
     void testCodeEngineeringPlan() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String codeEngineeringPlanPrompt = """
             请制定一个代码工程计划来实现以下需求：
@@ -343,7 +397,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(codeEngineeringPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("架构") || result.contains("数据库"), "响应应包含工程相关内容");
@@ -355,11 +409,17 @@ class SpringAIIntegrationTests {
     void testSummaryPlan() {
         String apiKey = ApiConfig.DEFAULT_API_KEY; // 使用雷鸣的密钥
 
-        OpenAiApi openAiApi = new OpenAiApi(ApiConfig.OPENAI_BASE_URL, apiKey);
-        ChatModel chatModel = new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("gpt-3.5-turbo")
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl(ApiConfig.OPENAI_BASE_URL)
+            .build();
+        
+        ChatModel chatModel = OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("gpt-3.5-turbo")
+                .build())
+            .build();
 
         String summaryPlanPrompt = """
             请使用总结计划来整理以下复杂信息：
@@ -379,7 +439,7 @@ class SpringAIIntegrationTests {
         Prompt prompt = new Prompt(summaryPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("总结") || result.contains("要点"), "响应应包含总结内容");

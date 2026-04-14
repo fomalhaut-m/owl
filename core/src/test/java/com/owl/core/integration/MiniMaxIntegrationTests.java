@@ -19,15 +19,21 @@ class MiniMaxIntegrationTests {
     private ChatModel createMiniMaxChatModel() {
         String apiKey = System.getenv("MINIMAX_API_KEY"); // 从环境变量获取 API KEY
         if (apiKey == null || apiKey.isEmpty()) {
-            apiKey = "your-minimax-api-key"; // 替换为您的实际 API KEY
+            apiKey = "sk-cp-0cx8-H-KKo14uqdNurVEZFw_U2KRjadkIGl3c41wfSVge75_ZE-v9GJHhtRyxZD96_l2461T8bK8KjGSRWwUj21Uhs_M1waHOZCuTViL3Vlvn10jh4iFPL0"; // 替换为您的实际 API KEY
         }
 
         // 使用 MiniMax API 端点
-        OpenAiApi openAiApi = new OpenAiApi("https://api.minimaxi.com/v1", apiKey);
-        return new OpenAiChatModel(openAiApi,
-            OpenAiChatOptions.builder()
-                .withModel("abab6.5s-chat") // 使用适当的 MiniMax 模型
-                .build());
+        var api = new OpenAiApi.Builder()
+            .apiKey(apiKey)
+            .baseUrl("https://api.minimaxi.com/v1")
+            .build();
+        
+        return OpenAiChatModel.builder()
+            .openAiApi(api)
+            .defaultOptions(OpenAiChatOptions.builder()
+                .model("abab6.5s-chat") // 使用适当的 MiniMax 模型
+                .build())
+            .build();
     }
 
     @Test
@@ -40,7 +46,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(userInput);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.length() > 0, "响应内容长度应大于0");
@@ -79,7 +85,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(userInput);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         System.out.println("MiniMax 大模型 Tools 调用结果: " + result);
@@ -106,7 +112,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(fullPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.toLowerCase().contains("mbti"), "响应应包含MBTI相关内容");
@@ -138,7 +144,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(combinedPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("整理") || result.contains("要点"), "响应应包含记忆整理相关内容");
@@ -169,7 +175,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(goalDecompositionPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("1.") && result.contains("2."), "响应应包含分步骤内容");
@@ -198,7 +204,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(toolCallPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("工具") || result.contains("调用"), "响应应包含工具调用相关内容");
@@ -229,7 +235,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(reflectionPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("分析") && result.contains("改进"), "响应应包含分析和改进内容");
@@ -259,7 +265,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(conversationPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("对话") || result.contains("阶段"), "响应应包含对话阶段内容");
@@ -291,7 +297,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(codeEngineeringPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("架构") || result.contains("数据库"), "响应应包含工程相关内容");
@@ -321,7 +327,7 @@ class MiniMaxIntegrationTests {
         Prompt prompt = new Prompt(summaryPlanPrompt);
         ChatResponse response = chatModel.call(prompt);
         
-        String result = response.getResult().getOutput().getContent();
+        String result = response.getResult().getOutput().getText();
         
         assertNotNull(result, "响应不应为空");
         assertTrue(result.contains("总结") || result.contains("要点"), "响应应包含总结内容");
