@@ -19,110 +19,359 @@ import java.net.ProxySelector;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * LLM 客户端封装类
+ * <p>
+ * 提供统一的 LLM 调用接口，支持同步和流式两种调用方式。
+ * 基于 Spring AI 框架，兼容多种大模型平台（火山引擎、MiniMax、百度千帆等）。
+ * </p>
+ *
+ * <h3>主要功能：</h3>
+ * <ul>
+ *   <li>同步调用 - 等待完整响应后返回</li>
+ *   <li>流式调用 - 实时接收响应片段，支持打字机效果</li>
+ *   <li>工具调用 - 支持函数调用能力，扩展 AI 能力边界</li>
+ *   <li>多轮对话 - 支持历史消息上下文管理</li>
+ *   <li>代理配置 - 支持 HTTP 代理设置</li>
+ * </ul>
+ *
+ * <h3>使用示例：</h3>
+ * <pre>{@code
+ * // 1. 创建配置
+ * LLMConfig config = new LLMConfig();
+ * config.setLlmPlatform(LLMPlatformEnum.HUOSHAN_ARK_CODING);
+ * config.setApiKey("your-api-key");
+ * config.setModel("doubao-seed-2.0-lite");
+ * config.setTemperature(0.2);
+ *
+ * // 2. 创建客户端
+ * LLMClient client = LLMClient.create(config);
+ *
+ * // 3. 同步调用
+ * ChatClientResponse response = client.chat("你好", Collections.emptyList());
+ * System.out.println(response.chatResponse().getResult().getOutput().getText());
+ *
+ * // 4. 流式调用
+ * Flux<ChatClientResponse> stream = client.chatStream("写一首诗", Collections.emptyList());
+ * stream.doOnNext(r -> System.out.print(r.chatResponse().getResult().getOutput().getText()))
+ *       .blockLast();
+ * }</pre>
+ *
+ * @author OWL Team
+ * @version 1.0
+ * @see LLMConfig
+ * @see LLMPlatformEnum
+ * @since 2026-04-16
+ */
 @Slf4j
 public class LLMClient {
 
+    /**
+     * Spring AI ChatClient 实例
+     * <p>
+     * 底层聊天客户端，负责与大模型 API 进行实际通信。
+     * 由构造函数初始化，线程安全，可复用。
+     * </p>
+     */
     private final ChatClient chatClient;
-    private final String[] defaultToolNames = {"", "", ""};
 
+    /**
+     * 创建 LLMClient 实例（工厂方法）
+     * <p>
+     * 根据提供的配置创建一个新的 LLM 客户端实例。
+     * 这是推荐的创建方式，使用静态工厂方法提高代码可读性。
+     * </p>
+     *
+     * @param llmConfig LLM 配置对象，包含：
+     *                  <ul>
+     *                  <li>platform - LLM 平台枚举（火山引擎、MiniMax 等）</li>
+     *                  <li>apiKey - API 密钥</li>
+     *                  <li>model - 模型名称</li>
+     *                  <li>temperature - 温度参数（0-2，越低越严谨）</li>
+     *                  <li>maxTokens - 最大 Token 数</li>
+     *                  <li>proxyDefinition - 代理配置（可选）</li>
+     *                  </ul>
+     * @return 新创建的 LLMClient 实例
+     * @throws IllegalArgumentException 如果配置为空或必填字段缺失
+     * @see LLMConfig
+     *
+     * <h3>使用示例：</h3>
+     * <pre>{@code
+     * LLMConfig config = new LLMConfig();
+     * config.setLlmPlatform(LLMPlatformEnum.HUOSHAN_ARK_CODING);
+     * config.setApiKey("your-api-key");
+     * config.setModel("doubao-seed-2.0-lite");
+     * LLMClient client = LLMClient.create(config);
+     * }</pre>
+     */
     public static LLMClient create(LLMConfig llmConfig) {
         return new LLMClient(llmConfig);
     }
 
+    /**
+     * 创建 LLMClient 实例（工厂方法，支持自定义 ChatClient）
+     * <p>
+     * 允许传入自定义的 ChatClient 实例，适用于需要完全控制底层客户端的场景。
+     * 注意：当前实现仍会使用 llmConfig 创建新的 ChatClient，chatClient 参数暂未使用。
+     * </p>
+     *
+     * @param llmConfig   LLM 配置对象
+     * @param chatClient  自定义的 ChatClient 实例（当前版本未使用，保留用于未来扩展）
+     * @return 新创建的 LLMClient 实例
+     * @deprecated 当前版本未使用 chatClient 参数，建议使用 {@link #create(LLMConfig)}
+     */
     public static LLMClient create(LLMConfig llmConfig, ChatClient chatClient) {
         return new LLMClient(llmConfig);
     }
 
+    /**
+     * 私有构造函数，初始化 LLMClient
+     * <p>
+     * 根据配置创建 OpenAI 兼容的 ChatModel，并构建 ChatClient。
+     * 配置包括：API 地址、密钥、模型、温度、Token 限制、代理等。
+     * </p>
+     *
+     * <h3>初始化流程：</h3>
+     * <ol>
+     *   <li>从 LLMConfig 提取平台配置（baseUrl、chatPath）</li>
+     *   <li>创建 OpenAiApi 实例，配置 API 密钥和地址</li>
+     *   <li>配置 RestClient（含代理支持和请求拦截器）</li>
+     *   <li>设置默认模型参数（model、temperature、maxTokens）</li>
+     *   <li>构建 OpenAiChatModel</li>
+     *   <li>使用 ChatClient.builder 包装 ChatModel</li>
+     * </ol>
+     *
+     * @param llmConfig LLM 配置对象，不能为 null
+     * @throws NullPointerException 如果 llmConfig 为 null
+     * @throws IllegalStateException 如果 API 密钥或平台配置无效
+     */
     private LLMClient(LLMConfig llmConfig) {
+        // 构建 OpenAI 兼容的 ChatModel
         ChatModel chatModel = OpenAiChatModel.builder()
                 .openAiApi(OpenAiApi.builder()
-                        .apiKey(llmConfig.getApiKey())
-                        .baseUrl(llmConfig.getLlmPlatform().getBaseUrl())
-                        .completionsPath(llmConfig.getLlmPlatform().getChatPath())
-                        .restClientBuilder(restClientBuilder(llmConfig.getProxyDefinition()))
+                        .apiKey(llmConfig.getApiKey())                          // API 密钥
+                        .baseUrl(llmConfig.getLlmPlatform().getBaseUrl())      // 平台基础 URL
+                        .completionsPath(llmConfig.getLlmPlatform().getChatPath()) // 对话接口路径
+                        .restClientBuilder(restClientBuilder(llmConfig.getProxyDefinition())) // REST 客户端配置
                         .build())
                 .defaultOptions(OpenAiChatOptions.builder()
-                        .model(llmConfig.getModel())
-                        .temperature(llmConfig.getTemperature())
-                        .maxTokens(llmConfig.getMaxTokens())
+                        .model(llmConfig.getModel())           // 模型名称
+                        .temperature(llmConfig.getTemperature()) // 温度参数
+                        .maxTokens(llmConfig.getMaxTokens())   // 最大 Token 数
                         .build())
                 .build();
 
+        // 构建 ChatClient
         this.chatClient = ChatClient.builder(chatModel)
-//                .defaultToolNames(defaultToolNames)
+//                .defaultToolNames(defaultToolNames)  // 暂不设置默认工具
                 .build();
     }
 
     /**
      * 同步调用 LLM，获取完整响应
      * <p>
-     * 支持多轮对话上下文和工具调用，适用于需要等待完整结果的场景。
+     * 发送用户消息到 LLM，等待完整响应后返回。适用于需要等待完整结果的场景，
+     * 如后台任务处理、批量生成等。
      * </p>
      *
-     * @param userMessage   用户当前输入消息
-     * @param messages      历史消息列表，包含：
+     * <h3>特性：</h3>
+     * <ul>
+     *   <li>✅ 支持多轮对话上下文（通过 messages 参数）</li>
+     *   <li>✅ 支持工具调用（通过 toolCallbacks 参数）</li>
+     *   <li>✅ 阻塞式调用，直到收到完整响应</li>
+     *   <li>✅ 返回完整的响应对象，包含元数据和使用量</li>
+     * </ul>
+     *
+     * @param userMessage   用户当前输入消息，不能为 null 或空
+     * @param messages      历史消息列表，用于维持对话上下文，可为 null 或空列表。
+     *                      包含的消息类型：
      *                      <ul>
-     *                      <li>SystemMessage：设定 AI 角色和系统指令</li>
-     *                      <li>UserMessage：用户输入</li>
-     *                      <li>AssistantMessage：AI 回复（可能含工具请求）</li>
-     *                      <li>ToolResponseMessage：工具执行结果（返回给 AI）</li>
+     *                      <li><b>SystemMessage</b>：设定 AI 角色和系统指令（通常放在列表开头）</li>
+     *                      <li><b>UserMessage</b>：用户的历史输入</li>
+     *                      <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
+     *                      <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
      *                      </ul>
-     * @param toolCallbacks 工具回调数组，用于支持函数调用能力
-     * @return ChatClientResponse 包含 AI 的完整响应内容、元数据等
+     * @param toolCallbacks 可变参数，工具回调数组，用于支持函数调用能力。
+     *                      可为 null 或不传，表示不使用工具。
+     *                      常见工具：时间查询、文件操作、API 调用等。
+     * @return ChatClientResponse 包含 AI 的完整响应，可通过以下链式调用获取内容：
+     *         <pre>{@code response.chatResponse().getResult().getOutput().getText()}</pre>
+     * @throws RuntimeException 如果 API 调用失败（网络错误、认证失败等）
+     *
+     * <h3>使用示例：</h3>
+     * <pre>{@code
+     * // 简单对话
+     * ChatClientResponse response = client.chat("你好", Collections.emptyList());
+     * String answer = response.chatResponse().getResult().getOutput().getText();
+     *
+     * // 带工具的对话
+     * ToolCallback[] tools = ToolCallbacks.from(new TimeTools());
+     * ChatClientResponse response = client.chat("现在几点？", Collections.emptyList(), tools);
+     * }</pre>
+     *
+     * @see #chatStream(String, List, ToolCallback...) 流式调用版本
+     * @see ChatClientResponse
      */
     public ChatClientResponse chat(String userMessage, List<Message> messages, ToolCallback... toolCallbacks) {
+        // 创建请求规范
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
+        
+        // 添加历史消息（如果存在）
         if (messages != null && !messages.isEmpty()) {
             spec.messages(messages);
         }
+        
+        // 添加工具回调（如果存在）
         if (toolCallbacks != null && toolCallbacks.length > 0) {
             spec.toolCallbacks(toolCallbacks);
         }
+        
+        // 执行调用并返回响应
         return spec.call().chatClientResponse();
     }
 
     /**
      * 流式调用 LLM，实时获取响应片段
      * <p>
-     * 支持多轮对话上下文和工具调用，适用于需要实时展示 AI 回复的场景（如聊天界面打字机效果）。
-     * 返回 Flux 响应式流，可以逐块接收 AI 生成的内容。
+     * 发送用户消息到 LLM，以流式方式逐块接收响应。适用于需要实时展示的场景，
+     * 如聊天界面的打字机效果、长文本生成的进度显示等。
      * </p>
      *
-     * @param userMessage   用户当前输入消息
-     * @param messages      历史消息列表，包含：
+     * <h3>特性：</h3>
+     * <ul>
+     *   <li>✅ 支持多轮对话上下文（通过 messages 参数）</li>
+     *   <li>✅ 支持工具调用（通过 toolCallbacks 参数）</li>
+     *   <li>✅ 非阻塞式响应式流，逐块发射响应片段</li>
+     *   <li>✅ 低延迟，首字快速返回</li>
+     *   <li>✅ 适合长文本生成和实时交互场景</li>
+     * </ul>
+     *
+     * @param userMessage   用户当前输入消息，不能为 null 或空
+     * @param messages      历史消息列表，用于维持对话上下文，可为 null 或空列表。
+     *                      包含的消息类型：
      *                      <ul>
-     *                      <li>SystemMessage：设定 AI 角色和系统指令</li>
-     *                      <li>UserMessage：用户输入</li>
-     *                      <li>AssistantMessage：AI 回复（可能含工具请求）</li>
-     *                      <li>ToolResponseMessage：工具执行结果（返回给 AI）</li>
+     *                      <li><b>SystemMessage</b>：设定 AI 角色和系统指令（通常放在列表开头）</li>
+     *                      <li><b>UserMessage</b>：用户的历史输入</li>
+     *                      <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
+     *                      <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
      *                      </ul>
-     * @param toolCallbacks 工具回调数组，用于支持函数调用能力
-     * @return Flux&lt;ChatClientResponse&gt; 响应式流，逐个发射 AI 响应片段
+     * @param toolCallbacks 可变参数，工具回调数组，用于支持函数调用能力。
+     *                      可为 null 或不传，表示不使用工具。
+     * @return Flux&lt;ChatClientResponse&gt; Reactor 响应式流，逐个发射 AI 响应片段。
+     *         每个元素包含一部分响应文本，需要订阅才能触发实际调用。
+     *         <pre>{@code
+     *         flux.doOnNext(response -> {
+     *             String chunk = response.chatResponse().getResult().getOutput().getText();
+     *             System.out.print(chunk); // 实时打印
+     *         }).blockLast(); // 等待流完成
+     *         }</pre>
+     * @throws RuntimeException 如果 API 调用失败（在订阅时抛出）
+     *
+     * <h3>使用示例：</h3>
+     * <pre>{@code
+     * // 基本流式调用
+     * Flux<ChatClientResponse> stream = client.chatStream("写一首诗", Collections.emptyList());
+     * StringBuilder fullText = new StringBuilder();
+     * stream.doOnNext(response -> {
+     *     String chunk = response.chatResponse().getResult().getOutput().getText();
+     *     if (chunk != null) {
+     *         fullText.append(chunk);
+     *         System.out.print(chunk); // 打字机效果
+     *     }
+     * }).blockLast();
+     *
+     * // WebFlux 集成（无需 block）
+     * return client.chatStream(message, history)
+     *     .map(response -> response.chatResponse().getResult().getOutput().getText())
+     *     .filter(text -> text != null);
+     * }</pre>
+     *
+     * @see #chat(String, List, ToolCallback...) 同步调用版本
+     * @see Flux Reactor 响应式流
      */
     public Flux<ChatClientResponse> chatStream(String userMessage, List<Message> messages, ToolCallback... toolCallbacks) {
-        return chatClient.prompt(userMessage).messages(messages).toolCallbacks(toolCallbacks).stream().chatClientResponse();
+        return chatClient.prompt(userMessage)
+                .messages(messages)
+                .toolCallbacks(toolCallbacks)
+                .stream()
+                .chatClientResponse();
     }
 
 
+    /**
+     * 构建 RestClient，配置 HTTP 客户端和代理
+     * <p>
+     * 创建并配置用于 LLM API 调用的 RestClient，包括：
+     * <ul>
+     *   <li>HTTP/2 协议支持</li>
+     *   <li>30 秒连接超时</li>
+     *   <li>可选的 HTTP 代理配置</li>
+     *   <li>JSON 请求/响应头</li>
+     *   <li>请求日志拦截器（TRACE 级别）</li>
+     * </ul>
+     * </p>
+     *
+     * @param proxyDefinition 代理配置对象，可为 null。
+     *                        如果不为 null 且 proxyEnabled=true，则启用代理。
+     *                        包含：
+     *                        <ul>
+     *                        <li>proxyEnabled - 是否启用代理</li>
+     *                        <li>host - 代理服务器主机地址</li>
+     *                        <li>port - 代理服务器端口</li>
+     *                        </ul>
+     * @return 配置好的 RestClient.Builder 实例
+     *
+     * <h3>配置详情：</h3>
+     * <ul>
+     *   <li><b>HTTP 版本</b>：HTTP/2（提供更好的性能和多路复用）</li>
+     *   <li><b>连接超时</b>：30 秒（防止网络问题导致长时间等待）</li>
+     *   <li><b>Content-Type</b>：application/json</li>
+     *   <li><b>Accept</b>：application/json</li>
+     *   <li><b>日志级别</b>：TRACE（仅在启用 TRACE 日志时记录请求详情）</li>
+     * </ul>
+     *
+     * <h3>代理配置示例：</h3>
+     * <pre>{@code
+     * LLMConfig.ProxyDefinition proxy = new LLMConfig.ProxyDefinition();
+     * proxy.setProxyEnabled(true);
+     * proxy.setHost("127.0.0.1");
+     * proxy.setPort(7890);
+     * config.setProxyDefinition(proxy);
+     * }</pre>
+     *
+     * @see LLMConfig.ProxyDefinition
+     * @see java.net.http.HttpClient
+     * @see JdkClientHttpRequestFactory
+     */
     private RestClient.Builder restClientBuilder(LLMConfig.ProxyDefinition proxyDefinition) {
+        // 创建 HTTP/2 客户端构建器
         java.net.http.HttpClient.Builder httpClientBuilder = java.net.http.HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))  // 连接超时30秒
                 .version(java.net.http.HttpClient.Version.HTTP_2);  // 使用HTTP/2
+        
+        // 配置代理（如果启用）
         if (proxyDefinition != null && proxyDefinition.isProxyEnabled()) {
             log.debug("使用代理配置, host:{}, port:{}", proxyDefinition.getHost(), proxyDefinition.getPort());
-            httpClientBuilder.proxy(ProxySelector.of(InetSocketAddress.createUnresolved(proxyDefinition.getHost(), proxyDefinition.getPort())));
+            httpClientBuilder.proxy(ProxySelector.of(
+                InetSocketAddress.createUnresolved(proxyDefinition.getHost(), proxyDefinition.getPort())
+            ));
         }
 
+        // 构建 HTTP 客户端
         java.net.http.HttpClient httpClient = httpClientBuilder.build();
 
+        // 创建请求工厂
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
 
+        // 构建 RestClient
         return RestClient.builder()
                 .requestFactory(requestFactory)
-                .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)  // 请求内容类型
+                .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)        // 期望响应类型
                 .requestInterceptor((request, body, execution) -> {
-                    log.trace("HTTP请求拦截 - 请求URL:{}, 方法:{}, headers:{}", request.getURI(), request.getMethod(), request.getHeaders());
+                    // 记录请求详情（TRACE 级别）
+                    log.trace("HTTP请求拦截 - 请求URL:{}, 方法:{}, headers:{}", 
+                            request.getURI(), request.getMethod(), request.getHeaders());
                     return execution.execute(request, body);
                 });
     }
