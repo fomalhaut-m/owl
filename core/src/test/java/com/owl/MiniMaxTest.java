@@ -1,8 +1,9 @@
-package com.owl.core.llm;
+package com.owl;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.owl.core.llm.LLMPlatformEnum;
 import com.owl.core.tools.TimeTools;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,7 @@
 package com.owl.core.llm;
 
 import com.owl.core.tools.TimeTools;
+import com.owl.core.tools.ToolComponent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -78,7 +79,7 @@ class LLMClientTest {
         config.setTemperature(0.2);
         LLMClient client = LLMClient.create(config);
 
-        ToolCallback[] callbacks = ToolCallbacks.from(new TimeTools());
+        ToolComponent callbacks = new TimeTools();
 
         ChatClientResponse response = client.chat(
                 "当前系统时间是? 当前上海的, 纽约的时间是?",
@@ -161,7 +162,7 @@ class LLMClientTest {
         Flux<ChatClientResponse> responseFlux = client.chatStream(
                 "现在北京时间几点？伦敦时间呢？",
                 Collections.emptyList(),
-                callbacks
+                new TimeTools()
         );
 
         assertNotNull(responseFlux);

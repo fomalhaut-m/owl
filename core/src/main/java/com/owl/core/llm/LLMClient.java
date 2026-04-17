@@ -1,5 +1,6 @@
 package com.owl.core.llm;
 
+import com.owl.core.tools.ToolComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -8,15 +9,21 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Flux;
 
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -109,22 +116,6 @@ public class LLMClient {
     }
 
     /**
-     * 创建 LLMClient 实例（工厂方法，支持自定义 ChatClient）
-     * <p>
-     * 允许传入自定义的 ChatClient 实例，适用于需要完全控制底层客户端的场景。
-     * 注意：当前实现仍会使用 llmConfig 创建新的 ChatClient，chatClient 参数暂未使用。
-     * </p>
-     *
-     * @param llmConfig   LLM 配置对象
-     * @param chatClient  自定义的 ChatClient 实例（当前版本未使用，保留用于未来扩展）
-     * @return 新创建的 LLMClient 实例
-     * @deprecated 当前版本未使用 chatClient 参数，建议使用 {@link #create(LLMConfig)}
-     */
-    public static LLMClient create(LLMConfig llmConfig, ChatClient chatClient) {
-        return new LLMClient(llmConfig);
-    }
-
-    /**
      * 私有构造函数，初始化 LLMClient
      * <p>
      * 根据配置创建 OpenAI 兼容的 ChatModel，并构建 ChatClient。
@@ -142,7 +133,7 @@ public class LLMClient {
      * </ol>
      *
      * @param llmConfig LLM 配置对象，不能为 null
-     * @throws NullPointerException 如果 llmConfig 为 null
+     * @throws NullPointerException  如果 llmConfig 为 null
      * @throws IllegalStateException 如果 API 密钥或平台配置无效
      */
     private LLMClient(LLMConfig llmConfig) {
@@ -195,37 +186,42 @@ public class LLMClient {
      *                      可为 null 或不传，表示不使用工具。
      *                      常见工具：时间查询、文件操作、API 调用等。
      * @return ChatClientResponse 包含 AI 的完整响应，可通过以下链式调用获取内容：
-     *         <pre>{@code response.chatResponse().getResult().getOutput().getText()}</pre>
+     * <pre>{@code response.chatResponse().getResult().getOutput().getText()}</pre>
      * @throws RuntimeException 如果 API 调用失败（网络错误、认证失败等）
      *
-     * <h3>使用示例：</h3>
-     * <pre>{@code
-     * // 简单对话
-     * ChatClientResponse response = client.chat("你好", Collections.emptyList());
-     * String answer = response.chatResponse().getResult().getOutput().getText();
+     *                          <h3>使用示例：</h3>
+     *                          <pre>{@code
+     *                          // 简单对话
+     *                          ChatClientResponse response = client.chat("你好", Collections.emptyList());
+     *                          String answer = response.chatResponse().getResult().getOutput().getText();
      *
-     * // 带工具的对话
-     * ToolCallback[] tools = ToolCallbacks.from(new TimeTools());
-     * ChatClientResponse response = client.chat("现在几点？", Collections.emptyList(), tools);
-     * }</pre>
-     *
-     * @see #chatStream(String, List, ToolCallback...) 流式调用版本
+     *                          // 带工具的对话
+     *                          ToolCallback[] tools = ToolCallbacks.from(new TimeTools());
+     *                          ChatClientResponse response = client.chat("现在几点？", Collections.emptyList(), tools);
+     *                          }</pre>
      * @see ChatClientResponse
      */
-    public ChatClientResponse chat(String userMessage, List<Message> messages, ToolCallback... toolCallbacks) {
+    public ChatClientResponse chat(String userMessage, List<Message> messages, ToolComponent... toolComponents) {
         // 创建请求规范
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
-        
+
         // 添加历史消息（如果存在）
         if (messages != null && !messages.isEmpty()) {
             spec.messages(messages);
         }
-        
+
         // 添加工具回调（如果存在）
-        if (toolCallbacks != null && toolCallbacks.length > 0) {
-            spec.toolCallbacks(toolCallbacks);
+        if (toolComponents != null && toolComponents.length > 0) {
+            List<ToolCallback> callbackList = Arrays.stream(toolComponents).map(ToolCallbacks::from).flatMap(Arrays::stream).toList();
+            if (!CollectionUtils.isEmpty(callbackList)) {
+                spec.toolCallbacks(callbackList);
+            }
         }
-        
+
+        HashMap<String, Object> toolContext = new HashMap<>();
+        toolContext.put("userId", "123");
+        spec.toolContext(toolContext);
+
         // 执行调用并返回响应
         return spec.call().chatClientResponse();
     }
@@ -258,8 +254,8 @@ public class LLMClient {
      * @param toolCallbacks 可变参数，工具回调数组，用于支持函数调用能力。
      *                      可为 null 或不传，表示不使用工具。
      * @return Flux&lt;ChatClientResponse&gt; Reactor 响应式流，逐个发射 AI 响应片段。
-     *         每个元素包含一部分响应文本，需要订阅才能触发实际调用。
-     *         <pre>{@code
+     * 每个元素包含一部分响应文本，需要订阅才能触发实际调用。
+     * <pre>{@code
      *         flux.doOnNext(response -> {
      *             String chunk = response.chatResponse().getResult().getOutput().getText();
      *             System.out.print(chunk); // 实时打印
@@ -267,34 +263,49 @@ public class LLMClient {
      *         }</pre>
      * @throws RuntimeException 如果 API 调用失败（在订阅时抛出）
      *
-     * <h3>使用示例：</h3>
-     * <pre>{@code
-     * // 基本流式调用
-     * Flux<ChatClientResponse> stream = client.chatStream("写一首诗", Collections.emptyList());
-     * StringBuilder fullText = new StringBuilder();
-     * stream.doOnNext(response -> {
-     *     String chunk = response.chatResponse().getResult().getOutput().getText();
-     *     if (chunk != null) {
-     *         fullText.append(chunk);
-     *         System.out.print(chunk); // 打字机效果
-     *     }
-     * }).blockLast();
+     *                          <h3>使用示例：</h3>
+     *                          <pre>{@code
+     *                          // 基本流式调用
+     *                          Flux<ChatClientResponse> stream = client.chatStream("写一首诗", Collections.emptyList());
+     *                          StringBuilder fullText = new StringBuilder();
+     *                          stream.doOnNext(response -> {
+     *                              String chunk = response.chatResponse().getResult().getOutput().getText();
+     *                              if (chunk != null) {
+     *                                  fullText.append(chunk);
+     *                                  System.out.print(chunk); // 打字机效果
+     *                              }
+     *                          }).blockLast();
      *
-     * // WebFlux 集成（无需 block）
-     * return client.chatStream(message, history)
-     *     .map(response -> response.chatResponse().getResult().getOutput().getText())
-     *     .filter(text -> text != null);
-     * }</pre>
-     *
-     * @see #chat(String, List, ToolCallback...) 同步调用版本
+     *                          // WebFlux 集成（无需 block）
+     *                          return client.chatStream(message, history)
+     *                              .map(response -> response.chatResponse().getResult().getOutput().getText())
+     *                              .filter(text -> text != null);
+     *                          }</pre>
      * @see Flux Reactor 响应式流
      */
-    public Flux<ChatClientResponse> chatStream(String userMessage, List<Message> messages, ToolCallback... toolCallbacks) {
-        return chatClient.prompt(userMessage)
-                .messages(messages)
-                .toolCallbacks(toolCallbacks)
-                .stream()
-                .chatClientResponse();
+    public Flux<ChatClientResponse> chatStream(String userMessage, List<Message> messages, ToolComponent... toolComponents) {
+        // 创建请求规范
+        ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
+
+        // 添加历史消息（如果存在）
+        if (messages != null && !messages.isEmpty()) {
+            spec.messages(messages);
+        }
+
+        // 添加工具回调（如果存在）
+        if (toolComponents != null && toolComponents.length > 0) {
+            List<ToolCallback> callbackList = Arrays.stream(toolComponents).map(ToolCallbacks::from).flatMap(Arrays::stream).toList();
+            if (!CollectionUtils.isEmpty(callbackList)) {
+                spec.toolCallbacks(callbackList);
+            }
+        }
+
+        HashMap<String, Object> toolContext = new HashMap<>();
+        toolContext.put("userId", "123");
+        spec.toolContext(toolContext);
+
+        // 执行调用并返回响应
+        return spec.stream().chatClientResponse();
     }
 
 
@@ -338,7 +349,6 @@ public class LLMClient {
      * proxy.setPort(7890);
      * config.setProxyDefinition(proxy);
      * }</pre>
-     *
      * @see LLMConfig.ProxyDefinition
      * @see java.net.http.HttpClient
      * @see JdkClientHttpRequestFactory
@@ -348,12 +358,12 @@ public class LLMClient {
         java.net.http.HttpClient.Builder httpClientBuilder = java.net.http.HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))  // 连接超时30秒
                 .version(java.net.http.HttpClient.Version.HTTP_2);  // 使用HTTP/2
-        
+
         // 配置代理（如果启用）
         if (proxyDefinition != null && proxyDefinition.isProxyEnabled()) {
             log.debug("使用代理配置, host:{}, port:{}", proxyDefinition.getHost(), proxyDefinition.getPort());
             httpClientBuilder.proxy(ProxySelector.of(
-                InetSocketAddress.createUnresolved(proxyDefinition.getHost(), proxyDefinition.getPort())
+                    InetSocketAddress.createUnresolved(proxyDefinition.getHost(), proxyDefinition.getPort())
             ));
         }
 
@@ -370,7 +380,7 @@ public class LLMClient {
                 .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)        // 期望响应类型
                 .requestInterceptor((request, body, execution) -> {
                     // 记录请求详情（TRACE 级别）
-                    log.trace("HTTP请求拦截 - 请求URL:{}, 方法:{}, headers:{}", 
+                    log.trace("HTTP请求拦截 - 请求URL:{}, 方法:{}, headers:{}",
                             request.getURI(), request.getMethod(), request.getHeaders());
                     return execution.execute(request, body);
                 });
