@@ -51,13 +51,12 @@ class MiniMaxTest {
         ChatModel model = OpenAiChatModel.builder()
                 .openAiApi(OpenAiApi.builder()
                         .apiKey(apiKey)
-                        .baseUrl("https://api.minimaxi.com")
-                        // .restClientBuilder(restClientBuilder(llmConfig.getProxyDefinition()))
+                        .baseUrl(LLMPlatformEnum.MINIMAX.getBaseUrl())
+                        .completionsPath(LLMPlatformEnum.MINIMAX.getChatPath())
                         .build())
                 .defaultOptions(OpenAiChatOptions.builder()
                         .model("MiniMax-M2.7")
                         .temperature(0.2d)
-                        // .maxTokens(1024)
                         .build())
                 .build();
 
