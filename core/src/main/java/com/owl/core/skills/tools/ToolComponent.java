@@ -1,4 +1,4 @@
-package com.owl.core.tools;
+package com.owl.core.skills.tools;
 
 /**
  * 工具组件标记接口

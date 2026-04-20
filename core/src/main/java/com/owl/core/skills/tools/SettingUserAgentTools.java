@@ -1,4 +1,4 @@
-package com.owl.core.tools;
+package com.owl.core.skills.tools;
 
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;

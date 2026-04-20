@@ -1,4 +1,4 @@
-package com.owl.core.tools;
+package com.owl.core.skills.tools;
 
 public interface UserAgentRepo {
     /// 获取

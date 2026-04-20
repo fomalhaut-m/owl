@@ -1,6 +1,6 @@
 package com.owl;
 
-import com.owl.core.tools.TimeTools;
+import com.owl.core.skills.tools.TimeTools;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;

@@ -1,6 +1,6 @@
 package com.owl.core.llm;
 
-import com.owl.core.tools.ToolComponent;
+import com.owl.core.skills.tools.ToolComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClientResponse;
@@ -20,9 +20,7 @@ import reactor.core.publisher.Flux;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -168,7 +166,7 @@ public class LLMClient {
      * <h3>特性：</h3>
      * <ul>
      *   <li>✅ 支持多轮对话上下文（通过 messages 参数）</li>
-     *   <li>✅ 支持工具调用（通过 toolCallbacks 参数）</li>
+     *   <li>✅ 支持工具调用（通过 toolComponents 参数）</li>
      *   <li>✅ 阻塞式调用，直到收到完整响应</li>
      *   <li>✅ 返回完整的响应对象，包含元数据和使用量</li>
      * </ul>
@@ -182,7 +180,7 @@ public class LLMClient {
      *                      <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
      *                      <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
      *                      </ul>
-     * @param toolCallbacks 可变参数，工具回调数组，用于支持函数调用能力。
+     * @param toolComponents 可变参数，工具回调数组，用于支持函数调用能力。
      *                      可为 null 或不传，表示不使用工具。
      *                      常见工具：时间查询、文件操作、API 调用等。
      * @return ChatClientResponse 包含 AI 的完整响应，可通过以下链式调用获取内容：
@@ -196,7 +194,7 @@ public class LLMClient {
      *                          String answer = response.chatResponse().getResult().getOutput().getText();
      *
      *                          // 带工具的对话
-     *                          ToolCallback[] tools = ToolCallbacks.from(new TimeTools());
+     *                          ToolCallback[] tools = toolComponents.from(new TimeTools());
      *                          ChatClientResponse response = client.chat("现在几点？", Collections.emptyList(), tools);
      *                          }</pre>
      * @see ChatClientResponse
@@ -236,7 +234,7 @@ public class LLMClient {
      * <h3>特性：</h3>
      * <ul>
      *   <li>✅ 支持多轮对话上下文（通过 messages 参数）</li>
-     *   <li>✅ 支持工具调用（通过 toolCallbacks 参数）</li>
+     *   <li>✅ 支持工具调用（通过 toolComponents 参数）</li>
      *   <li>✅ 非阻塞式响应式流，逐块发射响应片段</li>
      *   <li>✅ 低延迟，首字快速返回</li>
      *   <li>✅ 适合长文本生成和实时交互场景</li>
@@ -251,7 +249,7 @@ public class LLMClient {
      *                      <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
      *                      <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
      *                      </ul>
-     * @param toolCallbacks 可变参数，工具回调数组，用于支持函数调用能力。
+     * @param toolComponents 可变参数，工具回调数组，用于支持函数调用能力。
      *                      可为 null 或不传，表示不使用工具。
      * @return Flux&lt;ChatClientResponse&gt; Reactor 响应式流，逐个发射 AI 响应片段。
      * 每个元素包含一部分响应文本，需要订阅才能触发实际调用。
