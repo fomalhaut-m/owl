@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -81,6 +82,15 @@ public class LLMClient {
     private final ChatClient chatClient;
 
     /**
+     * 默认工具组件列表
+     * <p>
+     * 通过构造函数注入的工具组件，在每次调用时自动使用。
+     * 如果调用时传入了额外的工具组件，会与默认工具合并使用。
+     * </p>
+     */
+    private final List<ToolComponent> defaultToolComponents;
+
+    /**
      * 创建 LLMClient 实例（工厂方法）
      * <p>
      * 根据提供的配置创建一个新的 LLM 客户端实例。
@@ -110,7 +120,28 @@ public class LLMClient {
      * }</pre>
      */
     public static LLMClient create(LLMConfig llmConfig) {
-        return new LLMClient(llmConfig);
+        return new LLMClient(llmConfig, null);
+    }
+
+    /**
+     * 创建 LLMClient 实例（带默认工具组件）
+     * <p>
+     * 根据提供的配置和默认工具组件创建一个新的 LLM 客户端实例。
+     * 默认工具组件会在每次调用时自动使用。
+     * </p>
+     *
+     * @param llmConfig            LLM 配置对象
+     * @param defaultToolComponents 默认工具组件列表，可为 null
+     * @return 新创建的 LLMClient 实例
+     *
+     * <h3>使用示例：</h3>
+     * <pre>{@code
+     * List<ToolComponent> tools = Arrays.asList(new TimeTools(), new FileTools());
+     * LLMClient client = LLMClient.create(config, tools);
+     * }</pre>
+     */
+    public static LLMClient create(LLMConfig llmConfig, List<ToolComponent> defaultToolComponents) {
+        return new LLMClient(llmConfig, defaultToolComponents);
     }
 
     /**
@@ -130,11 +161,12 @@ public class LLMClient {
      *   <li>使用 ChatClient.builder 包装 ChatModel</li>
      * </ol>
      *
-     * @param llmConfig LLM 配置对象，不能为 null
+     * @param llmConfig            LLM 配置对象，不能为 null
+     * @param defaultToolComponents 默认工具组件列表，可为 null
      * @throws NullPointerException  如果 llmConfig 为 null
      * @throws IllegalStateException 如果 API 密钥或平台配置无效
      */
-    private LLMClient(LLMConfig llmConfig) {
+    private LLMClient(LLMConfig llmConfig, List<ToolComponent> defaultToolComponents) {
         // 构建 OpenAI 兼容的 ChatModel
         ChatModel chatModel = OpenAiChatModel.builder()
                 .openAiApi(OpenAiApi.builder()
@@ -154,6 +186,82 @@ public class LLMClient {
         this.chatClient = ChatClient.builder(chatModel)
 //                .defaultToolNames(defaultToolNames)  // 暂不设置默认工具
                 .build();
+
+        // 保存默认工具组件
+        this.defaultToolComponents = defaultToolComponents != null ? defaultToolComponents : Collections.emptyList();
+    }
+
+    // ==================== 基于 ChatRequest 的简化 API ====================
+
+    /**
+     * 同步调用 LLM（使用 ChatRequest）
+     * <p>
+     * 使用 ChatRequest 对象封装所有参数，简化方法签名。
+     * 工具组件从构造方法注入，自动与请求合并使用。
+     * </p>
+     *
+     * @param request 聊天请求对象，包含用户消息、历史消息、用户元数据
+     * @return OwlChatResponse AI 响应
+     *
+     * <h3>使用示例：</h3>
+     * <pre>{@code
+     * // 1. 简单用法
+     * ChatRequest request = ChatRequest.of("你好");
+     * OwlChatResponse response = client.chat(request);
+     *
+     * // 2. 完整用法
+     * ChatRequest request = ChatRequest.builder()
+     *     .userMessage("查询时间")
+     *     .messages(history)
+     *     .userMetadata(metadata)
+     *     .build();
+     * OwlChatResponse response = client.chat(request);
+     * }</pre>
+     */
+    public LLMAgentResponse chat(LLMChatRequest request) {
+        return chat(request.getUserMessage(), request.getMessages(), request.getUserMetadata(), defaultToolComponents);
+    }
+
+    /**
+     * 流式调用 LLM（使用 ChatRequest）
+     * <p>
+     * 使用 ChatRequest 对象封装所有参数，简化方法签名。
+     * 工具组件从构造方法注入，自动与请求合并使用。
+     * </p>
+     *
+     * @param request 聊天请求对象，包含用户消息、历史消息、用户元数据
+     * @return Flux&lt;OwlChatResponse&gt; 响应式流
+     *
+     * <h3>使用示例：</h3>
+     * <pre>{@code
+     * ChatRequest request = ChatRequest.of("写一首诗");
+     * client.chatStream(request)
+     *     .doOnNext(response -> System.out.print(response.content()))
+     *     .blockLast();
+     * }</pre>
+     */
+    public Flux<LLMAgentResponse> chatStream(LLMChatRequest request) {
+        return chatStream(request.getUserMessage(), request.getMessages(), request.getUserMetadata(), 
+                         defaultToolComponents.toArray(new ToolComponent[0]));
+    }
+
+    // ==================== 原有 API（保持向后兼容） ====================
+
+    public LLMAgentResponse chat(String userMessage, List<Message> messages, ToolComponent... toolComponents) {
+        return chat(userMessage, messages, null, Arrays.asList(toolComponents));
+    }
+
+    /**
+     * 同步调用 LLM（带用户元数据）
+     *
+     * @param userMessage    用户消息
+     * @param messages       历史消息
+     * @param userMetadata   用户元数据（可选）
+     * @param toolComponents 工具组件
+     * @return AI 响应
+     */
+    public LLMAgentResponse chat(String userMessage, List<Message> messages, UserMetadata userMetadata, ToolComponent... toolComponents) {
+        return chat(userMessage, messages, userMetadata, Arrays.asList(toolComponents));
     }
 
     /**
@@ -167,61 +275,103 @@ public class LLMClient {
      * <ul>
      *   <li>✅ 支持多轮对话上下文（通过 messages 参数）</li>
      *   <li>✅ 支持工具调用（通过 toolComponents 参数）</li>
+     *   <li>✅ 支持用户元数据传递（通过 userMetadata 参数）</li>
      *   <li>✅ 阻塞式调用，直到收到完整响应</li>
-     *   <li>✅ 返回完整的响应对象，包含元数据和使用量</li>
+     *   <li>✅ 返回简化的响应对象，易于使用</li>
      * </ul>
      *
-     * @param userMessage   用户当前输入消息，不能为 null 或空
-     * @param messages      历史消息列表，用于维持对话上下文，可为 null 或空列表。
-     *                      包含的消息类型：
-     *                      <ul>
-     *                      <li><b>SystemMessage</b>：设定 AI 角色和系统指令（通常放在列表开头）</li>
-     *                      <li><b>UserMessage</b>：用户的历史输入</li>
-     *                      <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
-     *                      <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
-     *                      </ul>
+     * @param userMessage    用户当前输入消息，不能为 null 或空
+     * @param messages       历史消息列表，用于维持对话上下文，可为 null 或空列表。
+     *                       包含的消息类型：
+     *                       <ul>
+     *                       <li><b>SystemMessage</b>：设定 AI 角色和系统指令（通常放在列表开头）</li>
+     *                       <li><b>UserMessage</b>：用户的历史输入</li>
+     *                       <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
+     *                       <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
+     *                       </ul>
+     * @param userMetadata   用户元数据对象，包含 userId、sessionId 等信息。
+     *                       可为 null，表示不传递用户上下文。
+     *                       用于工具调用时识别用户身份和会话。
      * @param toolComponents 可变参数，工具回调数组，用于支持函数调用能力。
-     *                      可为 null 或不传，表示不使用工具。
-     *                      常见工具：时间查询、文件操作、API 调用等。
-     * @return ChatClientResponse 包含 AI 的完整响应，可通过以下链式调用获取内容：
-     * <pre>{@code response.chatResponse().getResult().getOutput().getText()}</pre>
+     *                       可为 null 或不传，表示不使用工具。
+     *                       常见工具：时间查询、文件操作、API 调用等。
+     * @return OwlChatResponse 包含 AI 的完整响应，可通过 response.content() 获取文本内容
      * @throws RuntimeException 如果 API 调用失败（网络错误、认证失败等）
      *
      *                          <h3>使用示例：</h3>
      *                          <pre>{@code
-     *                          // 简单对话
-     *                          ChatClientResponse response = client.chat("你好", Collections.emptyList());
-     *                          String answer = response.chatResponse().getResult().getOutput().getText();
+     * // 1. 简单对话（无用户元数据）
+     * OwlChatResponse response = client.chat("你好", Collections.emptyList());
+     * String answer = response.content();
      *
-     *                          // 带工具的对话
-     *                          ToolCallback[] tools = toolComponents.from(new TimeTools());
-     *                          ChatClientResponse response = client.chat("现在几点？", Collections.emptyList(), tools);
-     *                          }</pre>
-     * @see ChatClientResponse
+     * // 2. 带用户元数据的对话
+     * UserMetadata metadata = UserMetadata.of("user-123", "session-456");
+     * OwlChatResponse response = client.chat("你好", messages, metadata);
+     *
+     * // 3. 带工具的对话
+     * OwlChatResponse response = client.chat("现在几点？", Collections.emptyList(), new TimeTools());
+     *
+     * // 4. 完整用法
+     * UserMetadata metadata = UserMetadata.builder()
+     *     .userId("user-123")
+     *     .sessionId("session-456")
+     *     .addMetadata("timezone", "Asia/Shanghai")
+     *     .build();
+     * OwlChatResponse response = client.chat("查询时间", messages, metadata, new TimeTools());
+     * }</pre>
+     * @see LLMAgentResponse
+     * @see UserMetadata
      */
-    public ChatClientResponse chat(String userMessage, List<Message> messages, ToolComponent... toolComponents) {
-        // 创建请求规范
-        ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
+    public LLMAgentResponse chat(String userMessage, List<Message> messages, UserMetadata userMetadata, List<ToolComponent> toolComponents) {
+        try {
+            // 创建请求规范
+            ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
 
-        // 添加历史消息（如果存在）
-        if (messages != null && !messages.isEmpty()) {
-            spec.messages(messages);
-        }
-
-        // 添加工具回调（如果存在）
-        if (toolComponents != null && toolComponents.length > 0) {
-            List<ToolCallback> callbackList = Arrays.stream(toolComponents).map(ToolCallbacks::from).flatMap(Arrays::stream).toList();
-            if (!CollectionUtils.isEmpty(callbackList)) {
-                spec.toolCallbacks(callbackList);
+            // 添加历史消息（如果存在）
+            if (messages != null && !messages.isEmpty()) {
+                spec.messages(messages);
             }
+
+            // 添加工具回调（如果存在）
+            if (toolComponents != null && !toolComponents.isEmpty()) {
+                List<ToolCallback> callbackList = toolComponents.stream()
+                        .map(ToolCallbacks::from)
+                        .flatMap(Arrays::stream)
+                        .toList();
+                if (!CollectionUtils.isEmpty(callbackList)) {
+                    spec.toolCallbacks(callbackList);
+                }
+            }
+
+            // 设置用户元数据（如果存在）
+            if (userMetadata != null) {
+                spec.toolContext(userMetadata.toMap());
+            } else {
+                // 默认元数据
+                HashMap<String, Object> defaultContext = new HashMap<>();
+                defaultContext.put("userId", "default_user");
+                spec.toolContext(defaultContext);
+            }
+
+            // 执行调用并获取 Spring AI 响应
+            ChatClientResponse springResponse = spec.call().chatClientResponse();
+
+            // 转换为 OwlChatResponse
+            if (springResponse != null && springResponse.chatResponse() != null
+                    && springResponse.chatResponse().getResult() != null
+                    && springResponse.chatResponse().getResult().getOutput() != null) {
+                String content = springResponse.chatResponse().getResult().getOutput().getText();
+                return LLMAgentResponse.success(content);
+            }
+
+            // 如果响应为空，返回空内容
+            return LLMAgentResponse.success("");
+
+        } catch (Exception e) {
+            // 记录错误并返回错误响应
+            log.error("LLM 调用失败: {}", e.getMessage(), e);
+            return LLMAgentResponse.error("LLM 调用失败: " + e.getMessage());
         }
-
-        HashMap<String, Object> toolContext = new HashMap<>();
-        toolContext.put("userId", "123");
-        spec.toolContext(toolContext);
-
-        // 执行调用并返回响应
-        return spec.call().chatClientResponse();
     }
 
     /**
@@ -240,48 +390,62 @@ public class LLMClient {
      *   <li>✅ 适合长文本生成和实时交互场景</li>
      * </ul>
      *
-     * @param userMessage   用户当前输入消息，不能为 null 或空
-     * @param messages      历史消息列表，用于维持对话上下文，可为 null 或空列表。
-     *                      包含的消息类型：
-     *                      <ul>
-     *                      <li><b>SystemMessage</b>：设定 AI 角色和系统指令（通常放在列表开头）</li>
-     *                      <li><b>UserMessage</b>：用户的历史输入</li>
-     *                      <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
-     *                      <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
-     *                      </ul>
+     * @param userMessage    用户当前输入消息，不能为 null 或空
+     * @param messages       历史消息列表，用于维持对话上下文，可为 null 或空列表。
+     *                       包含的消息类型：
+     *                       <ul>
+     *                       <li><b>SystemMessage</b>：设定 AI 角色和系统指令（通常放在列表开头）</li>
+     *                       <li><b>UserMessage</b>：用户的历史输入</li>
+     *                       <li><b>AssistantMessage</b>：AI 的历史回复（可能包含工具调用请求）</li>
+     *                       <li><b>ToolResponseMessage</b>：工具执行结果（返回给 AI 继续推理）</li>
+     *                       </ul>
      * @param toolComponents 可变参数，工具回调数组，用于支持函数调用能力。
-     *                      可为 null 或不传，表示不使用工具。
-     * @return Flux&lt;ChatClientResponse&gt; Reactor 响应式流，逐个发射 AI 响应片段。
+     *                       可为 null 或不传，表示不使用工具。
+     * @return Flux&lt;OwlChatResponse&gt; Reactor 响应式流，逐个发射 AI 响应片段。
      * 每个元素包含一部分响应文本，需要订阅才能触发实际调用。
      * <pre>{@code
-     *         flux.doOnNext(response -> {
-     *             String chunk = response.chatResponse().getResult().getOutput().getText();
-     *             System.out.print(chunk); // 实时打印
-     *         }).blockLast(); // 等待流完成
-     *         }</pre>
+     * flux.doOnNext(response -> {
+     *     String chunk = response.content();
+     *     System.out.print(chunk); // 实时打印
+     * }).blockLast(); // 等待流完成
+     * }</pre>
      * @throws RuntimeException 如果 API 调用失败（在订阅时抛出）
      *
      *                          <h3>使用示例：</h3>
      *                          <pre>{@code
-     *                          // 基本流式调用
-     *                          Flux<ChatClientResponse> stream = client.chatStream("写一首诗", Collections.emptyList());
-     *                          StringBuilder fullText = new StringBuilder();
-     *                          stream.doOnNext(response -> {
-     *                              String chunk = response.chatResponse().getResult().getOutput().getText();
-     *                              if (chunk != null) {
-     *                                  fullText.append(chunk);
-     *                                  System.out.print(chunk); // 打字机效果
-     *                              }
-     *                          }).blockLast();
+     * // 基本流式调用
+     * Flux<OwlChatResponse> stream = client.chatStream("写一首诗", Collections.emptyList());
+     * StringBuilder fullText = new StringBuilder();
+     * stream.doOnNext(response -> {
+     *     String chunk = response.content();
+     *     if (chunk != null) {
+     *         fullText.append(chunk);
+     *         System.out.print(chunk); // 打字机效果
+     *     }
+     * }).blockLast();
      *
-     *                          // WebFlux 集成（无需 block）
-     *                          return client.chatStream(message, history)
-     *                              .map(response -> response.chatResponse().getResult().getOutput().getText())
-     *                              .filter(text -> text != null);
-     *                          }</pre>
+     * // WebFlux 集成（无需 block）
+     * return client.chatStream(message, history)
+     *     .map(OwlChatResponse::content)
+     *     .filter(text -> text != null);
+     * }</pre>
      * @see Flux Reactor 响应式流
+     * @see LLMAgentResponse
      */
-    public Flux<ChatClientResponse> chatStream(String userMessage, List<Message> messages, ToolComponent... toolComponents) {
+    public Flux<LLMAgentResponse> chatStream(String userMessage, List<Message> messages, ToolComponent... toolComponents) {
+        return chatStream(userMessage, messages, null, toolComponents);
+    }
+
+    /**
+     * 流式调用 LLM（带用户元数据）
+     *
+     * @param userMessage    用户消息
+     * @param messages       历史消息
+     * @param userMetadata   用户元数据（可选）
+     * @param toolComponents 工具组件
+     * @return 响应式流
+     */
+    public Flux<LLMAgentResponse> chatStream(String userMessage, List<Message> messages, UserMetadata userMetadata, ToolComponent... toolComponents) {
         // 创建请求规范
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
 
@@ -292,18 +456,37 @@ public class LLMClient {
 
         // 添加工具回调（如果存在）
         if (toolComponents != null && toolComponents.length > 0) {
-            List<ToolCallback> callbackList = Arrays.stream(toolComponents).map(ToolCallbacks::from).flatMap(Arrays::stream).toList();
+            List<ToolCallback> callbackList = Arrays.stream(toolComponents)
+                    .map(ToolCallbacks::from)
+                    .flatMap(Arrays::stream)
+                    .toList();
             if (!CollectionUtils.isEmpty(callbackList)) {
                 spec.toolCallbacks(callbackList);
             }
         }
 
-        HashMap<String, Object> toolContext = new HashMap<>();
-        toolContext.put("userId", "123");
-        spec.toolContext(toolContext);
+        // 设置用户元数据（如果存在）
+        if (userMetadata != null) {
+            spec.toolContext(userMetadata.toMap());
+        } else {
+            // 默认元数据
+            HashMap<String, Object> defaultContext = new HashMap<>();
+            defaultContext.put("userId", "default_user");
+            spec.toolContext(defaultContext);
+        }
 
-        // 执行调用并返回响应
-        return spec.stream().chatClientResponse();
+        // 执行调用并将 Spring AI 响应转换为 OwlChatResponse
+        return spec.stream()
+                .chatClientResponse()
+                .map(springResponse -> {
+                    if (springResponse != null && springResponse.chatResponse() != null
+                            && springResponse.chatResponse().getResult() != null
+                            && springResponse.chatResponse().getResult().getOutput() != null) {
+                        String content = springResponse.chatResponse().getResult().getOutput().getText();
+                        return new LLMAgentResponse(content, null, null, null, null, true, null);
+                    }
+                    return new LLMAgentResponse(null, null, null, null, null, true, null);
+                });
     }
 
 

@@ -4,14 +4,9 @@ import com.owl.core.skills.tools.TimeTools;
 import com.owl.core.skills.tools.ToolComponent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClientResponse;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.support.ToolCallbacks;
-import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
 import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,13 +32,14 @@ class LLMClientTest {
     void testChatBasic() {
         LLMClient client = createHuoshanClient();
 
-        ChatClientResponse response = client.chat(
+        LLMAgentResponse response = client.chat(
                 "Hi, How are you?",
                 Collections.emptyList()
         );
 
         assertNotNull(response);
-        String content = response.chatResponse().getResult().getOutput().getText();
+        assertTrue(response.isSuccess());
+        String content = response.content();
         assertNotNull(content);
         assertFalse(content.isEmpty());
         System.out.println("同步响应: " + content);
@@ -54,16 +50,14 @@ class LLMClientTest {
     void testChatWithHistory() {
         LLMClient client = createHuoshanClient();
 
-        // 模拟简单的对话历史
-        List<Message> messages = Collections.emptyList();
-
-        ChatClientResponse response = client.chat(
+        LLMAgentResponse response = client.chat(
                 "请介绍一下你自己",
-                messages
+                Collections.emptyList()
         );
 
         assertNotNull(response);
-        String content = response.chatResponse().getResult().getOutput().getText();
+        assertTrue(response.isSuccess());
+        String content = response.content();
         assertNotNull(content);
         assertFalse(content.isEmpty());
         System.out.println("带历史的同步响应: " + content);
@@ -79,16 +73,17 @@ class LLMClientTest {
         config.setTemperature(0.2);
         LLMClient client = LLMClient.create(config);
 
-        ToolComponent callbacks = new TimeTools();
+        ToolComponent timeTools = new TimeTools();
 
-        ChatClientResponse response = client.chat(
+        LLMAgentResponse response = client.chat(
                 "当前系统时间是? 当前上海的, 纽约的时间是?",
                 Collections.emptyList(),
-                callbacks
+                timeTools
         );
 
         assertNotNull(response);
-        String content = response.chatResponse().getResult().getOutput().getText();
+        assertTrue(response.isSuccess());
+        String content = response.content();
         assertNotNull(content);
         assertFalse(content.isEmpty());
         System.out.println("工具调用响应: " + content);
@@ -99,7 +94,7 @@ class LLMClientTest {
     void testChatStreamBasic() {
         LLMClient client = createHuoshanClient();
 
-        Flux<ChatClientResponse> responseFlux = client.chatStream(
+        Flux<LLMAgentResponse> responseFlux = client.chatStream(
                 "请写一首关于春天的短诗",
                 Collections.emptyList()
         );
@@ -109,7 +104,7 @@ class LLMClientTest {
         // 收集流式响应
         StringBuilder fullResponse = new StringBuilder();
         responseFlux.doOnNext(response -> {
-            String chunk = response.chatResponse().getResult().getOutput().getText();
+            String chunk = response.content();
             if (chunk != null) {
                 fullResponse.append(chunk);
                 System.out.print(chunk); // 实时打印，模拟打字机效果
@@ -125,18 +120,16 @@ class LLMClientTest {
     void testChatStreamWithHistory() {
         LLMClient client = createHuoshanClient();
 
-        List<Message> messages = Collections.emptyList();
-
-        Flux<ChatClientResponse> responseFlux = client.chatStream(
+        Flux<LLMAgentResponse> responseFlux = client.chatStream(
                 "用三句话总结人工智能的发展",
-                messages
+                Collections.emptyList()
         );
 
         assertNotNull(responseFlux);
 
         StringBuilder fullResponse = new StringBuilder();
         responseFlux.doOnNext(response -> {
-            String chunk = response.chatResponse().getResult().getOutput().getText();
+            String chunk = response.content();
             if (chunk != null) {
                 fullResponse.append(chunk);
                 System.out.print(chunk);
@@ -157,9 +150,7 @@ class LLMClientTest {
         config.setTemperature(0.2);
         LLMClient client = LLMClient.create(config);
 
-        ToolCallback[] callbacks = ToolCallbacks.from(new TimeTools());
-
-        Flux<ChatClientResponse> responseFlux = client.chatStream(
+        Flux<LLMAgentResponse> responseFlux = client.chatStream(
                 "现在北京时间几点？伦敦时间呢？",
                 Collections.emptyList(),
                 new TimeTools()
@@ -169,7 +160,7 @@ class LLMClientTest {
 
         StringBuilder fullResponse = new StringBuilder();
         responseFlux.doOnNext(response -> {
-            String chunk = response.chatResponse().getResult().getOutput().getText();
+            String chunk = response.content();
             if (chunk != null) {
                 fullResponse.append(chunk);
                 System.out.print(chunk);
@@ -193,15 +184,106 @@ class LLMClientTest {
 
         LLMClient client = LLMClient.create(config);
 
-        ChatClientResponse response = client.chat(
+        LLMAgentResponse response = client.chat(
                 "Hello, tell me a joke",
                 Collections.emptyList()
         );
 
         assertNotNull(response);
-        String content =response.chatResponse().getResult().getOutput().getText();
+        assertTrue(response.isSuccess());
+        String content = response.content();
         assertNotNull(content);
         assertFalse(content.isEmpty());
         System.out.println("MiniMax 响应: " + content);
+    }
+
+    @Test
+    @DisplayName("测试 ChatRequest API - 基本用法")
+    void testChatRequestBasic() {
+        // 创建带默认工具的客户端
+        LLMConfig config = new LLMConfig();
+        config.setLlmPlatform(LLMPlatformEnum.HUOSHAN_ARK_CODING);
+        config.setApiKey(apiKey);
+        config.setModel("doubao-seed-2.0-lite");
+        config.setTemperature(0.2);
+        
+        LLMClient client = LLMClient.create(config);
+
+        // 使用 ChatRequest.of() 便捷方法
+        LLMChatRequest request = LLMChatRequest.of("你好，请介绍一下自己");
+        
+        LLMAgentResponse response = client.chat(request);
+
+        assertNotNull(response);
+        assertTrue(response.isSuccess());
+        String content = response.content();
+        assertNotNull(content);
+        assertFalse(content.isEmpty());
+        System.out.println("ChatRequest 基本用法: " + content);
+    }
+
+    @Test
+    @DisplayName("测试 ChatRequest API - 完整用法")
+    void testChatRequestFull() {
+        // 创建带默认工具的客户端
+        LLMConfig config = new LLMConfig();
+        config.setLlmPlatform(LLMPlatformEnum.HUOSHAN_ARK_CODING);
+        config.setApiKey(apiKey);
+        config.setModel("Doubao-Seed-2.0-pro");
+        config.setTemperature(0.2);
+        
+        LLMClient client = LLMClient.create(config, Collections.singletonList(new TimeTools()));
+
+        // 使用 Builder 模式构建完整的请求
+        UserMetadata metadata = UserMetadata.builder()
+                .userId("user-123")
+                .sessionId("session-456")
+                .build();
+                
+        LLMChatRequest request = LLMChatRequest.builder()
+                .userMessage("当前北京时间几点？")
+                .messages(Collections.emptyList())
+                .userMetadata(metadata)
+                .build();
+        
+        LLMAgentResponse response = client.chat(request);
+
+        assertNotNull(response);
+        assertTrue(response.isSuccess());
+        String content = response.content();
+        assertNotNull(content);
+        assertFalse(content.isEmpty());
+        System.out.println("ChatRequest 完整用法: " + content);
+    }
+
+    @Test
+    @DisplayName("测试 ChatRequest 流式 API")
+    void testChatRequestStream() {
+        LLMConfig config = new LLMConfig();
+        config.setLlmPlatform(LLMPlatformEnum.HUOSHAN_ARK_CODING);
+        config.setApiKey(apiKey);
+        config.setModel("doubao-seed-2.0-lite");
+        config.setTemperature(0.2);
+        
+        LLMClient client = LLMClient.create(config);
+
+        // 使用 ChatRequest 进行流式调用
+        LLMChatRequest request = LLMChatRequest.of("写一首关于秋天的短诗");
+        
+        Flux<LLMAgentResponse> responseFlux = client.chatStream(request);
+
+        assertNotNull(responseFlux);
+
+        StringBuilder fullResponse = new StringBuilder();
+        responseFlux.doOnNext(response -> {
+            String chunk = response.content();
+            if (chunk != null) {
+                fullResponse.append(chunk);
+                System.out.print(chunk);
+            }
+        }).blockLast();
+
+        assertFalse(fullResponse.toString().isEmpty());
+        System.out.println("\nChatRequest 流式响应: " + fullResponse);
     }
 }

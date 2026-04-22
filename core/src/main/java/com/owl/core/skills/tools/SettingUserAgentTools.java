@@ -1,5 +1,6 @@
 package com.owl.core.skills.tools;
 
+import com.owl.core.skills.AgentSkillRepo;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -8,9 +9,9 @@ import java.util.Optional;
 
 public class SettingUserAgentTools implements ToolComponent {
 
-    private final UserAgentRepo userAgentRepo;
+    private final AgentSkillRepo userAgentRepo;
 
-    public SettingUserAgentTools(UserAgentRepo userAgentRepo) {
+    public SettingUserAgentTools(AgentSkillRepo userAgentRepo) {
         this.userAgentRepo = userAgentRepo;
     }
 
@@ -20,7 +21,7 @@ public class SettingUserAgentTools implements ToolComponent {
                                   @ToolParam(description = "配置类型:USER,IDENTITY,SOUL,TOOLS,HEARTBEAT") String type,
                                   @ToolParam(description = "配置内容") String content) {
         Optional<String> userId = getUserId(context);
-        userAgentRepo.setUserConfig(userId.orElse(null), type, content);
+        userAgentRepo.setAgentSkills(userId.orElse(null), type, content);
     }
 
     ///  从上下文中获取 userId, 获取指定类型的用户配置
@@ -28,7 +29,7 @@ public class SettingUserAgentTools implements ToolComponent {
     public String getUserConfig(ToolContext context,
                                 @ToolParam(description = "配置类型:USER,IDENTITY,SOUL,TOOLS,HEARTBEAT") String type) {
         Optional<String> userId = getUserId(context);
-        return userAgentRepo.getUserConfig(userId.orElse(null), type);
+        return userAgentRepo.getAgentSkills(userId.orElse(null), type);
     }
 
     ///  从上下文中获取 userId, 获取USER.md

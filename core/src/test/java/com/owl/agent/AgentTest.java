@@ -1,22 +1,20 @@
 package com.owl.agent;
 
-import com.owl.core.llm.LLMClient;
-import com.owl.core.llm.LLMConfig;
-import com.owl.core.llm.LLMPlatformEnum;
+import com.owl.core.llm.*;
 import com.owl.core.skills.DefaultPrompts;
 import com.owl.core.skills.tools.SettingUserAgentTools;
-import com.owl.core.skills.tools.UserAgentRepo;
+import com.owl.core.skills.AgentSkillRepo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class AgentTest {
 
@@ -35,7 +33,7 @@ public class AgentTest {
     }
 
     /**
-     * 创建火山引擎配置的 LLMClient
+     * 创建火山引擎配置的 LLMClient（带默认工具）
      */
     private LLMClient createHuoshanClient() {
         LLMConfig config = new LLMConfig();
@@ -43,31 +41,34 @@ public class AgentTest {
         config.setApiKey(apiKey);
         config.setModel("doubao-seed-2.0-lite");
         config.setTemperature(0.2);
-        return LLMClient.create(config);
+        
+        // 创建默认工具组件
+        SettingUserAgentTools settingUserAgentTools = getSettingUserAgentTools();
+        return LLMClient.create(config, Arrays.asList(settingUserAgentTools));
     }
 
     @Test
     @DisplayName("测试Agent chat - 基本对话")
     void testChatBasic() {
         LLMClient client = createHuoshanClient();
-        SettingUserAgentTools settingUserAgentTools = getSettingUserAgentTools();
+
+        // 构建系统消息列表
+        List<Message> systemMessages = List.of(
+                new AssistantMessage(userConfig.get("USER")),
+                new AssistantMessage(userConfig.get("IDENTITY")),
+                new AssistantMessage(userConfig.get("SOUL")),
+                new AssistantMessage(userConfig.get("TOOLS")),
+                new AssistantMessage(userConfig.get("HEARTBEAT"))
+        );
 
         // 第一轮对话：发送 BOOTSTRAP 引导脚本
         System.out.println("========== 第一轮：发送引导脚本 ==========");
-        ChatClientResponse response1 = client.chat(
-                DefaultPrompts.BOOTSTRAP_DEFAULT,
-                List.of(
-                        new AssistantMessage(userConfig.get("USER")),
-                        new AssistantMessage(userConfig.get("IDENTITY")),
-                        new AssistantMessage(userConfig.get("SOUL")),
-                        new AssistantMessage(userConfig.get("TOOLS")),
-                        new AssistantMessage(userConfig.get("HEARTBEAT"))
-                ),
-                settingUserAgentTools
-        );
+        LLMChatRequest request1 = LLMChatRequest.of(DefaultPrompts.BOOTSTRAP_DEFAULT, systemMessages);
+        LLMAgentResponse response1 = client.chat(request1);
 
         assertNotNull(response1);
-        String content1 = response1.chatResponse().getResult().getOutput().getText();
+        assertTrue(response1.isSuccess());
+        String content1 = response1.content();
         assertNotNull(content1);
         assertFalse(content1.isEmpty());
         System.out.println("AI 回复: " + content1);
@@ -78,21 +79,22 @@ public class AgentTest {
         String userMessage = "我是小雷，你是小智, 小智你是一个短剧专家!";
         System.out.println("用户说: " + userMessage);
 
-        ChatClientResponse response2 = client.chat(
-                userMessage,
-                List.of(
-                        new AssistantMessage(userConfig.get("USER")),
-                        new AssistantMessage(userConfig.get("IDENTITY")),
-                        new AssistantMessage(userConfig.get("SOUL")),
-                        new AssistantMessage(userConfig.get("TOOLS")),
-                        new AssistantMessage(userConfig.get("HEARTBEAT")),
-                        new AssistantMessage(content1)  // 添加上一轮 AI 的回复
-                ),
-                settingUserAgentTools
+        // 构建包含上一轮对话的历史消息
+        List<Message> history2 = Arrays.asList(
+                new AssistantMessage(userConfig.get("USER")),
+                new AssistantMessage(userConfig.get("IDENTITY")),
+                new AssistantMessage(userConfig.get("SOUL")),
+                new AssistantMessage(userConfig.get("TOOLS")),
+                new AssistantMessage(userConfig.get("HEARTBEAT")),
+                new AssistantMessage(content1)  // 添加上一轮 AI 的回复
         );
+        
+        LLMChatRequest request2 = LLMChatRequest.of(userMessage, history2);
+        LLMAgentResponse response2 = client.chat(request2);
 
         assertNotNull(response2);
-        String content2 = response2.chatResponse().getResult().getOutput().getText();
+        assertTrue(response2.isSuccess());
+        String content2 = response2.content();
         assertNotNull(content2);
         assertFalse(content2.isEmpty());
         System.out.println("AI 回复: " + content2);
@@ -103,22 +105,23 @@ public class AgentTest {
         String followUpMessage = "好的，小智。你能帮我做什么？";
         System.out.println("用户说: " + followUpMessage);
 
-        ChatClientResponse response3 = client.chat(
-                followUpMessage,
-                List.of(
-                        new AssistantMessage(userConfig.get("USER")),
-                        new AssistantMessage(userConfig.get("IDENTITY")),
-                        new AssistantMessage(userConfig.get("SOUL")),
-                        new AssistantMessage(userConfig.get("TOOLS")),
-                        new AssistantMessage(userConfig.get("HEARTBEAT")),
-                        new AssistantMessage(content1),  // 第一轮 AI 回复
-                        new AssistantMessage(content2)   // 第二轮 AI 回复
-                ),
-                settingUserAgentTools
+        // 构建包含前两轮对话的历史消息
+        List<Message> history3 = Arrays.asList(
+                new AssistantMessage(userConfig.get("USER")),
+                new AssistantMessage(userConfig.get("IDENTITY")),
+                new AssistantMessage(userConfig.get("SOUL")),
+                new AssistantMessage(userConfig.get("TOOLS")),
+                new AssistantMessage(userConfig.get("HEARTBEAT")),
+                new AssistantMessage(content1),  // 第一轮 AI 回复
+                new AssistantMessage(content2)   // 第二轮 AI 回复
         );
+        
+        LLMChatRequest request3 = LLMChatRequest.of(followUpMessage, history3);
+        LLMAgentResponse response3 = client.chat(request3);
 
         assertNotNull(response3);
-        String content3 = response3.chatResponse().getResult().getOutput().getText();
+        assertTrue(response3.isSuccess());
+        String content3 = response3.content();
         assertNotNull(content3);
         assertFalse(content3.isEmpty());
         System.out.println("AI 回复: " + content3);
@@ -137,17 +140,17 @@ public class AgentTest {
     }
 
     private static SettingUserAgentTools getSettingUserAgentTools() {
-        return new SettingUserAgentTools(new UserAgentRepo() {
+        return new SettingUserAgentTools(new AgentSkillRepo() {
 
 
             @Override
-            public String getUserConfig(String userId, String type) {
+            public String getAgentSkills(String userId, String type) {
                 userConfigGetCount.put(type, userConfigGetCount.getOrDefault(type, 0) + 1);
                 return userConfig.get(type);
             }
 
             @Override
-            public String setUserConfig(String userId, String type, String content) {
+            public String setAgentSkills(String userId, String type, String content) {
                 userConfigSetCount.put(type, userConfigSetCount.getOrDefault(type, 0) + 1);
                 return userConfig.put(type, content);
             }
