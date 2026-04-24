@@ -16,3 +16,17 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+owl:
+  user:
+    default-user-id: main
+    preferences:
+      context-max-token-rate: 0.3
+      cold-backup-expire-days: 90
+      s-downgrade-days: 14
+      s-delete-days: 30
+      a-downgrade-days: 7
+      a-delete-days: 14
+      b-delete-days: 7
+      semantic-similar-threshold: 0.85
+      compress-ratio: 10

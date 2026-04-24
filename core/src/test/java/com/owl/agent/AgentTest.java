@@ -2,7 +2,7 @@ package com.owl.agent;
 
 import com.owl.core.llm.*;
 import com.owl.core.skills.DefaultPrompts;
-import com.owl.core.skills.tools.SettingUserAgentTools;
+import com.owl.core.skills.tools.AgentTools;
 import com.owl.core.skills.AgentSkillRepo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ public class AgentTest {
         config.setTemperature(0.2);
         
         // 创建默认工具组件
-        SettingUserAgentTools settingUserAgentTools = getSettingUserAgentTools();
+        AgentTools settingUserAgentTools = getSettingUserAgentTools();
         return LLMClient.create(config, Arrays.asList(settingUserAgentTools));
     }
 
@@ -139,8 +139,8 @@ public class AgentTest {
         System.out.println("写入次数 " + userConfigSetCount);
     }
 
-    private static SettingUserAgentTools getSettingUserAgentTools() {
-        return new SettingUserAgentTools(new AgentSkillRepo() {
+    private static AgentTools getSettingUserAgentTools() {
+        return new AgentTools(new AgentSkillRepo() {
 
 
             @Override

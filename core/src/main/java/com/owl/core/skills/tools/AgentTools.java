@@ -1,0 +1,36 @@
+package com.owl.core.skills.tools;
+
+import com.owl.core.skills.AgentSkillRepo;
+import com.owl.core.user.UserPreferencesRepo;
+import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+
+import java.util.Optional;
+
+public class AgentTools implements ToolComponent {
+
+    private final AgentSkillRepo userAgentRepo;
+
+    public AgentTools(AgentSkillRepo userAgentRepo) {
+        this.userAgentRepo = userAgentRepo;
+    }
+
+    ///  从上下文中获取 userId, 设置USER.md
+    @Tool(name = "agent_config_set", description = "设置指定类型的用户配置")
+    public void settingUserConfig(ToolContext context,
+                                  @ToolParam(description = "配置类型:IDENTITY,SOUL,TOOLS,HEARTBEAT") String type,
+                                  @ToolParam(description = "配置内容") String content) {
+        Optional<String> userId = getUserId(context);
+        userAgentRepo.setAgentSkills(userId.orElse(MAIN_USER_ID), type, content);
+    }
+
+    ///  从上下文中获取 userId, 获取指定类型的用户配置
+    @Tool(name = "agent_config_get", description = "获取指定类型的用户配置")
+    public String getUserConfig(ToolContext context,
+                                @ToolParam(description = "配置类型:IDENTITY,SOUL,TOOLS,HEARTBEAT") String type) {
+        Optional<String> userId = getUserId(context);
+        return userAgentRepo.getAgentSkills(userId.orElse(MAIN_USER_ID), type);
+    }
+
+}

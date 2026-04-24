@@ -1,5 +1,9 @@
 package com.owl.core.skills.tools;
 
+import org.springframework.ai.chat.model.ToolContext;
+
+import java.util.Optional;
+
 /**
  * 工具组件标记接口
  * <p>
@@ -18,13 +22,13 @@ package com.owl.core.skills.tools;
  * <pre>{@code
  * // 1. 实现 ToolComponent 接口
  * public class TimeTools implements ToolComponent {
- *     
+ *
  *     @Tool(name = "getCurrentTime", description = "获取当前时间")
  *     public String getCurrentTime() {
  *         return LocalDateTime.now().toString();
  *     }
  * }
- * 
+ *
  * // 2. 框架会自动扫描并注册所有实现 ToolComponent 的类
  * }</pre>
  *
@@ -59,4 +63,24 @@ package com.owl.core.skills.tools;
  * @since 2026-04-16
  */
 public interface ToolComponent {
+
+    /**
+     * 用户 ID 在 ToolContext 中的键名常量
+     */
+    String USER_ID_KEY = "userId";
+    /**
+     * 主用户 ID 常量
+     */
+    String MAIN_USER_ID = "main";
+
+
+    /**
+     * 从工具上下文中获取用户 ID
+     *
+     * @param context 工具上下文对象
+     * @return 用户 ID，如果不存在则返回空 Optional
+     */
+    default Optional<String> getUserId(ToolContext context) {
+        return Optional.ofNullable(context.getContext().get(USER_ID_KEY)).map(Object::toString);
+    }
 }

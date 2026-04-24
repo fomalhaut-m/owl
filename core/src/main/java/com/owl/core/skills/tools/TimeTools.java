@@ -72,7 +72,7 @@ public class TimeTools implements ToolComponent{
      * 返回："当前系统时间：2026-04-16 14:30:00"
      * }</pre>
      */
-    @Tool(name = "getCurrentSystemTime", description = "获取当前系统时间")
+    @Tool(name = "time_current_system", description = "获取当前系统时间")
     public String getCurrentSystemTime() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return "当前系统时间：" + LocalDateTime.now().format(formatter);
@@ -126,7 +126,7 @@ public class TimeTools implements ToolComponent{
      *   <tr><td>悉尼</td><td>Australia/Sydney</td><td>UTC+10/UTC+11</td></tr>
      * </table>
      */
-    @Tool(name = "getCurrentTimeByZone", description = "获取指定时区的当前系统时间")
+    @Tool(name = "time_current_by_zone", description = "获取指定时区的当前系统时间")
     public String getCurrentTimeByZone(@ToolParam(description = "时区ID，例如 Asia/Shanghai、Europe/London、America/New_York") String zoneId) {
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
