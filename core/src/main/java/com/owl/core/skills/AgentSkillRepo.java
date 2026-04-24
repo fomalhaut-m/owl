@@ -1,37 +1,33 @@
 package com.owl.core.skills;
 
+import java.util.List;
+
 /**
- * Agent 技能仓库接口
+ * Agent 技能仓库接口（JPA 命名风格）
  * <p>
  * 定义了 Agent 技能的持久化操作规范，包括技能的获取和设置功能。
  * 支持基于用户 ID 和技能类型的技能管理。
  * </p>
  *
+ * <h3>JPA 命名风格：</h3>
+ * <ul>
+ *   <li>findAgentSkillsByUserIdAndType() - 查询技能</li>
+ *   <li>saveAgentSkills() - 保存技能</li>
+ * </ul>
+ *
  * @author Owl Team
  */
 public interface AgentSkillRepo {
-    /**
-     * 获取 Agent 技能
-     * <p>
-     * 根据用户 ID 和技能类型读取对应的技能内容。
-     * </p>
-     *
-     * @param userId 用户唯一标识
-     * @param type   技能类型，用于区分不同种类的技能
-     * @return 技能内容，如果不存在则返回 null
-     */
-    String getAgentSkills(String userId, String type);
 
     /**
-     * 设置 Agent 技能
-     * <p>
-     * 将指定的技能内容保存到存储系统中。
-     * </p>
-     *
-     * @param userId  用户唯一标识
-     * @param type    技能类型，用于区分不同种类的技能
-     * @param content 技能的具体内容
-     * @return 操作结果信息
+     * 查询 Agent 技能
+     * <p>JPA 风格：findByUserIdAndType</p>
      */
-    String setAgentSkills(String userId, String type, String content);
+    String findAgentSkillsByUserIdAndType(String userId, String type);
+
+    /**
+     * 保存 Agent 技能
+     * <p>JPA 风格：save</p>
+     */
+    void saveAgentSkills(String userId, String type, String content);
 }

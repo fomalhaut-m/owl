@@ -11,25 +11,42 @@ import java.util.Optional;
  * 实现此接口的类会被框架自动扫描和注册为可用工具。
  * </p>
  *
- * <h3>作用：</h3>
+ * <h3>命名规范（必须遵循）：</h3>
  * <ul>
- *   <li>标识包含 {@link org.springframework.ai.tool.annotation.Tool} 方法的类</li>
- *   <li>方便框架自动扫描和注册工具</li>
- *   <li>提供类型安全的标记，支持接口继承和多态</li>
+ *   <li>格式：<code>{模块}_{资源}_{动作}</code>，使用 snake_case</li>
+ *   <li>必须以 <code>owl_</code> 前缀开头，确保全局唯一性</li>
+ *   <li>示例：<code>owl_memory_save</code>, <code>owl_agent_config_get</code></li>
  * </ul>
+ *
+ * <h3>已注册的 Tool 名称：</h3>
+ * <table>
+ *   <tr><th>Tool Name</th><th>类</th><th>方法</th></tr>
+ *   <tr><td>owl_memory_save</td><td>MemoryTools</td><td>saveMemory</td></tr>
+ *   <tr><td>owl_memory_get</td><td>MemoryTools</td><td>getMemory</td></tr>
+ *   <tr><td>owl_memory_delete</td><td>MemoryTools</td><td>deleteMemory</td></tr>
+ *   <tr><td>owl_memory_list_all</td><td>MemoryTools</td><td>getMemoryPaths</td></tr>
+ *   <tr><td>owl_memory_list_by_time</td><td>MemoryTools</td><td>getMemoryPathsByTimeRange</td></tr>
+ *   <tr><td>owl_memory_config_save</td><td>MemoryTools</td><td>saveUserConfig</td></tr>
+ *   <tr><td>owl_agent_config_set</td><td>AgentTools</td><td>settingUserConfig</td></tr>
+ *   <tr><td>owl_agent_config_get</td><td>AgentTools</td><td>getUserConfig</td></tr>
+ *   <tr><td>owl_chat_history_get</td><td>ChatTools</td><td>getChatHistory</td></tr>
+ *   <tr><td>owl_time_current_system</td><td>TimeTools</td><td>getCurrentSystemTime</td></tr>
+ *   <tr><td>owl_time_current_by_zone</td><td>TimeTools</td><td>getCurrentTimeByZone</td></tr>
+ * </table>
  *
  * <h3>使用示例：</h3>
  * <pre>{@code
  * // 1. 实现 ToolComponent 接口
  * public class TimeTools implements ToolComponent {
  *
- *     @Tool(name = "getCurrentTime", description = "获取当前时间")
+ *     @Tool(name = "owl_time_current", description = "获取当前时间")
  *     public String getCurrentTime() {
  *         return LocalDateTime.now().toString();
  *     }
  * }
  *
  * // 2. 框架会自动扫描并注册所有实现 ToolComponent 的类
+ * // 3. 启动时 ToolNameValidator 会验证名称唯一性
  * }</pre>
  *
  * <h3>与相关概念的关系：</h3>

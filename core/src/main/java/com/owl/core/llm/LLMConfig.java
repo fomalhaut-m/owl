@@ -1,5 +1,6 @@
 package com.owl.core.llm;
 
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -44,7 +45,7 @@ import lombok.NoArgsConstructor;
  *
  * @author OWL Team
  * @version 1.0
- * @see LLMPlatformEnum
+ * @see LLMPlatform
  * @see LLMClient
  * @since 2026-04-16
  */
@@ -60,9 +61,10 @@ public class LLMConfig {
      * 支持的 platform包括：火山引擎、MiniMax、百度千帆、阿里云通义等。
      * </p>
      *
-     * @see LLMPlatformEnum
+     * @see LLMPlatform
      */
-    private LLMPlatformEnum llmPlatform;
+    @NotNull(message = "LLM 平台不能为空")
+    private LLMPlatform llmPlatform;
 
     /**
      * LLM API 密钥
@@ -85,6 +87,7 @@ public class LLMConfig {
      *   <li>定期轮换密钥</li>
      * </ul>
      */
+    @NotBlank(message = "API Key 不能为空")
     private String apiKey;
 
     /**
@@ -105,6 +108,7 @@ public class LLMConfig {
      *
      * @see LLMPlatformEnum 各平台的默认模型
      */
+    @NotBlank(message = "模型名称不能为空")
     private String model;
 
     /**
@@ -152,6 +156,8 @@ public class LLMConfig {
      *   <li>null 时：使用平台默认值（通常为 0.5-0.7）</li>
      * </ul>
      */
+    @DecimalMin(value = "0.0", message = "温度参数不能小于 0")
+    @DecimalMax(value = "2.0", message = "温度参数不能大于 2")
     private Double temperature = 0.5;
 
     /**
@@ -179,6 +185,7 @@ public class LLMConfig {
      *
      * @see <a href="https://platform.openai.com/tokenizer">OpenAI Tokenizer</a>
      */
+    @Min(value = 1, message = "最大 Token 数必须大于 0")
     private Integer maxTokens;
 
     /**
@@ -231,6 +238,7 @@ public class LLMConfig {
          *   <li>IPv6："::1"</li>
          * </ul>
          */
+        @NotBlank(message = "代理主机地址不能为空", groups = WhenProxyEnabled.class)
         private String host;
 
         /**
@@ -246,6 +254,13 @@ public class LLMConfig {
          *   <li>Clash：7890</li>
          * </ul>
          */
+        @Min(value = 1, message = "代理端口必须介于 1-65535")
+        @Max(value = 65535, message = "代理端口必须介于 1-65535")
         private int port;
     }
+
+    /**
+     * 代理启用时的校验分组
+     */
+    public interface WhenProxyEnabled {}
 }

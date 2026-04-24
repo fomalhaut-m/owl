@@ -61,7 +61,7 @@ import lombok.Getter;
  * @since 2026-04-16
  */
 @Getter
-public enum LLMPlatformEnum {
+public enum LLMPlatformEnum implements LLMPlatform {
 
     // ==================== 火山方舟（字节豆包）====================
 

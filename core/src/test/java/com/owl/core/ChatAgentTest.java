@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("ChatAgent 测试")
 class ChatAgentTest {
 
+    private static final String API_KEY = "fb5c4b70-abb0-4e0b-b390-138ad84c505a";
     private LLMClient llmClient;
     private AgentSkillRepo skillRepo;
     private Map<String, String> userConfig;
@@ -40,8 +41,13 @@ class ChatAgentTest {
      */
     @BeforeEach
     void setUp() {
-        // 创建 LLM 客户端
-        llmClient = createHuoshanClient();
+        // 创建 LLM 客户端（使用新的 Builder 模式）
+        LLMConfig config = new LLMConfig();
+        config.setLlmPlatform(LLMPlatformEnum.HUOSHAN_ARK_CODING);
+        config.setApiKey(API_KEY);
+        config.setModel("doubao-seed-2.0-lite");
+        config.setTemperature(0.2);
+        llmClient = LLMClient.create(config);
 
         // 初始化用户配置
         userConfig = new ConcurrentHashMap<>();
@@ -56,30 +62,18 @@ class ChatAgentTest {
     }
 
     /**
-     * 创建火山引擎配置的 LLMClient
-     */
-    private LLMClient createHuoshanClient() {
-        LLMConfig config = new LLMConfig();
-        config.setLlmPlatform(LLMPlatformEnum.HUOSHAN_ARK_CODING);
-        config.setApiKey("fb5c4b70-abb0-4e0b-b390-138ad84c505a");
-        config.setModel("doubao-seed-2.0-lite");
-        config.setTemperature(0.2);
-        return LLMClient.create(config);
-    }
-
-    /**
      * 创建技能仓库
      */
     private AgentSkillRepo createSkillRepo() {
         return new AgentSkillRepo() {
             @Override
-            public String getAgentSkills(String userId, String type) {
+            public String findAgentSkillsByUserIdAndType(String userId, String type) {
                 return userConfig.get(type);
             }
 
             @Override
-            public String setAgentSkills(String userId, String type, String content) {
-                return userConfig.put(type, content);
+            public void saveAgentSkills(String userId, String type, String content) {
+                userConfig.put(type, content);
             }
         };
     }
@@ -186,8 +180,8 @@ class ChatAgentTest {
                 .build();
 
         // 验证两个用户的配置是隔离的
-        String userAConfig = skillRepo.getAgentSkills("user-a", "USER");
-        String userBConfig = skillRepo.getAgentSkills("user-b", "USER");
+        String userAConfig = skillRepo.findAgentSkillsByUserIdAndType("user-a", "USER");
+        String userBConfig = skillRepo.findAgentSkillsByUserIdAndType("user-b", "USER");
 
         assertNotEquals(userAConfig, userBConfig);
         assertTrue(userAConfig.contains("张三"));

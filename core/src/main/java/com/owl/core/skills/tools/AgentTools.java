@@ -17,20 +17,20 @@ public class AgentTools implements ToolComponent {
     }
 
     ///  从上下文中获取 userId, 设置USER.md
-    @Tool(name = "agent_config_set", description = "设置指定类型的用户配置")
+    @Tool(name = "owl_agent_config_set", description = "设置指定类型的用户配置")
     public void settingUserConfig(ToolContext context,
                                   @ToolParam(description = "配置类型:IDENTITY,SOUL,TOOLS,HEARTBEAT") String type,
                                   @ToolParam(description = "配置内容") String content) {
         Optional<String> userId = getUserId(context);
-        userAgentRepo.setAgentSkills(userId.orElse(MAIN_USER_ID), type, content);
+        userAgentRepo.saveAgentSkills(userId.orElse(MAIN_USER_ID), type, content);
     }
 
     ///  从上下文中获取 userId, 获取指定类型的用户配置
-    @Tool(name = "agent_config_get", description = "获取指定类型的用户配置")
+    @Tool(name = "owl_agent_config_get", description = "获取指定类型的用户配置")
     public String getUserConfig(ToolContext context,
                                 @ToolParam(description = "配置类型:IDENTITY,SOUL,TOOLS,HEARTBEAT") String type) {
         Optional<String> userId = getUserId(context);
-        return userAgentRepo.getAgentSkills(userId.orElse(MAIN_USER_ID), type);
+        return userAgentRepo.findAgentSkillsByUserIdAndType(userId.orElse(MAIN_USER_ID), type);
     }
 
 }

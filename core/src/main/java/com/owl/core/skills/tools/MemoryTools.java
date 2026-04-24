@@ -8,6 +8,7 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,23 +19,15 @@ import java.util.Optional;
  * 实现了 ToolComponent 接口，可被框架自动扫描并注册为可用工具。
  * </p>
  *
- * <h3>功能特性：</h3>
+ * <h3>JPA 命名风格：</h3>
  * <ul>
- *   <li>✅ 支持用户级别的记忆隔离</li>
- *   <li>✅ 提供完整的 CRUD 操作</li>
- *   <li>✅ 支持时间范围查询</li>
- *   <li>✅ 自动获取上下文中的用户 ID</li>
+ *   <li>save() - 保存记忆</li>
+ *   <li>findByUserIdAndPathAndName() - 获取记忆</li>
+ *   <li>delete() - 删除记忆</li>
+ *   <li>findAllByUserId() - 获取所有记忆</li>
+ *   <li>findAllByUserIdAndTimeBetween() - 按时间范围获取记忆</li>
+ *   <li>saveConfig() - 保存配置</li>
  * </ul>
- *
- * <h3>使用示例：</h3>
- * <pre>{@code
- * // LLM 可以调用以下工具：
- * // 1. saveMemory - 保存记忆
- * // 2. getMemory - 获取记忆
- * // 3. deleteMemory - 删除记忆
- * // 4. getMemoryPaths - 获取所有记忆路径
- * // 5. getMemoryPaths(startTime, endTime) - 获取指定时间范围内的记忆路径
- * }</pre>
  *
  * @author Owl Team
  * @version 1.0
@@ -44,128 +37,151 @@ import java.util.Optional;
  */
 public class MemoryTools implements ToolComponent {
 
-    /**
-     * 记忆仓库实例
-     */
     private final MemoryRepo memoryRepo;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-
-    /**
-     * 构造记忆管理工具
-     *
-     * @param memoryRepo 记忆仓库实现
-     */
     public MemoryTools(MemoryRepo memoryRepo) {
         this.memoryRepo = memoryRepo;
     }
 
     /**
      * 保存记忆
-     * <p>
-     * 将指定的记忆内容保存到存储系统中，自动从上下文中获取用户 ID。
-     * 如果上下文中没有用户 ID，则使用主用户 ID。
-     * </p>
-     *
-     * @param context 工具上下文对象，包含用户信息
-     * @param path    记忆的存储路径，用于定位和检索记忆
-     * @param content 记忆的具体内容
+     * <p>JPA 风格：save</p>
      */
-    @Tool(name = "memory_save", description = "保存记忆")
-    public void saveMemory(ToolContext context,
-                           @ToolParam(description = "记忆路径") String path,
-                           @ToolParam(description = "记忆内容") String content) {
+    @Tool(
+        name = "owl_memory_save",
+        description = """
+            保存用户记忆到文件系统
+            - 支持创建新记忆或更新已有记忆
+            - 路径格式：目录路径/文件名称，如 working/P0/note.md
+            - 用户隔离：自动从上下文获取用户ID
+            """
+    )
+    public void saveMemory(
+            ToolContext context,
+            @ToolParam(description = "记忆存放的目录路径，支持多级目录，如 working/P0") String path,
+            @ToolParam(description = "记忆文件名称，必须以.md结尾，如 note.md、meeting.md") String name,
+            @ToolParam(description = "记忆的具体内容，支持Markdown格式") String content) {
         Optional<String> userId = getUserId(context);
-        memoryRepo.saveMemory(userId.orElse(MAIN_USER_ID), path, content);
+        List<String> pathList = parsePath(path);
+        memoryRepo.save(userId.orElse(MAIN_USER_ID), pathList, name, content);
     }
 
     /**
      * 获取记忆
-     * <p>
-     * 根据路径读取对应的记忆内容，自动从上下文中获取用户 ID。
-     * 如果上下文中没有用户 ID，则使用主用户 ID。
-     * </p>
-     *
-     * @param context 工具上下文对象，包含用户信息
-     * @param path    记忆的存储路径
-     * @return 记忆内容，如果不存在则返回 null
+     * <p>JPA 风格：findByUserIdAndPathAndName</p>
      */
-    @Tool(name = "memory_get", description = "获取记忆")
-    public String getMemory(ToolContext context,
-                            @ToolParam(description = "记忆路径") String path) {
+    @Tool(
+        name = "owl_memory_get",
+        description = """
+            根据路径获取用户的单条记忆内容
+            - 返回记忆的完整内容
+            - 如果记忆不存在返回null
+            - 用户隔离：自动从上下文获取用户ID
+            """
+    )
+    public String getMemory(
+            ToolContext context,
+            @ToolParam(description = "记忆存放的目录路径，如 working/P0") String path,
+            @ToolParam(description = "记忆文件名称，如 note.md") String name) {
         Optional<String> userId = getUserId(context);
-        return memoryRepo.getMemory(userId.orElse(MAIN_USER_ID), path);
+        List<String> pathList = parsePath(path);
+        return memoryRepo.findByUserIdAndPathAndName(userId.orElse(MAIN_USER_ID), pathList, name);
     }
 
     /**
      * 删除记忆
-     * <p>
-     * 从存储系统中删除指定的记忆，自动从上下文中获取用户 ID。
-     * 如果上下文中没有用户 ID，则使用主用户 ID。
-     * </p>
-     *
-     * @param context 工具上下文对象，包含用户信息
-     * @param path    记忆的存储路径
-     * @return 成功删除的记忆数量
+     * <p>JPA 风格：delete</p>
      */
-    @Tool(name = "memory_delete", description = "删除记忆: 返回的是删除成功的数量")
-    public int deleteMemory(ToolContext context,
-                            @ToolParam(description = "记忆路径") String path) {
+    @Tool(
+        name = "owl_memory_delete",
+        description = """
+            删除用户的指定记忆
+            - 删除成功后记忆将无法恢复
+            - 如果记忆不存在不会报错
+            - 用户隔离：自动从上下文获取用户ID
+            """
+    )
+    public void deleteMemory(
+            ToolContext context,
+            @ToolParam(description = "记忆存放的目录路径，如 working/P0") String path,
+            @ToolParam(description = "记忆文件名称，如 note.md") String name) {
         Optional<String> userId = getUserId(context);
-       return memoryRepo.deleteMemory(userId.orElse(MAIN_USER_ID), path);
+        List<String> pathList = parsePath(path);
+        memoryRepo.delete(userId.orElse(MAIN_USER_ID), pathList, name);
     }
 
     /**
-     * 获取所有记忆元数据
-     * <p>
-     * 获取指定用户的所有记忆路径及其元数据信息，自动从上下文中获取用户 ID。
-     * 如果上下文中没有用户 ID，则使用主用户 ID。
-     * </p>
-     *
-     * @param context 工具上下文对象，包含用户信息
-     * @return 记忆元数据列表，如果没有记忆则返回空列表
+     * 获取所有记忆
+     * <p>JPA 风格：findAllByUserId</p>
      */
-    @Tool(name = "memory_list_all", description = "获取所有记忆路径")
+    @Tool(
+        name = "owl_memory_list_all",
+        description = """
+            获取用户的所有记忆元数据列表
+            - 返回包含路径、名称、大小、创建/更新时间等信息
+            - 适合用于展示记忆列表或让用户选择要操作的记忆
+            - 用户隔离：自动从上下文获取用户ID
+            """
+    )
     public List<MemoryMetadata> getMemoryPaths(ToolContext context) {
         Optional<String> userId = getUserId(context);
-        return memoryRepo.getMemoryPaths(userId.orElse(MAIN_USER_ID));
+        return memoryRepo.findAllByUserId(userId.orElse(MAIN_USER_ID));
     }
 
     /**
-     * 获取指定时间范围内的记忆元数据
-     * <p>
-     * 根据时间戳范围筛选并获取指定用户的记忆路径及其元数据信息，
-     * 自动从上下文中获取用户 ID。如果上下文中没有用户 ID，则使用主用户 ID。
-     * </p>
-     *
-     * @param context   工具上下文对象，包含用户信息
-     * @param startTime 起始时间戳（毫秒）
-     * @param endTime   结束时间戳（毫秒）
-     * @return 符合时间范围的记忆元数据列表，如果没有符合条件的记忆则返回空列表
+     * 获取指定时间范围内的记忆
+     * <p>JPA 风格：findAllByUserIdAndTimeBetween</p>
      */
-    @Tool(name = "memory_list_by_time", description = "获取指定时间范围内的记忆路径")
-    public List<MemoryMetadata> getMemoryPathsByTimeRange(ToolContext context,
-                                               @ToolParam(description = "起始时间戳") long startTime,
-                                               @ToolParam(description = "结束时间戳") long endTime) {
+    @Tool(
+        name = "owl_memory_list_by_time",
+        description = """
+            获取用户在指定时间范围内的所有记忆
+            - startTime: 起始时间，13位时间戳（毫秒）
+            - endTime: 结束时间，13位时间戳（毫秒）
+            - 可用于获取最近N小时/天的记忆
+            - 用户隔离：自动从上下文获取用户ID
+            """
+    )
+    public List<MemoryMetadata> getMemoryPathsByTimeRange(
+            ToolContext context,
+            @ToolParam(description = "起始时间，13位时间戳（毫秒），如 1704067200000") long startTime,
+            @ToolParam(description = "结束时间，13位时间戳（毫秒），如 1704153600000") long endTime) {
         Optional<String> userId = getUserId(context);
-        return memoryRepo.getMemoryPaths(userId.orElse(MAIN_USER_ID), startTime, endTime);
+        return memoryRepo.findAllByUserIdAndTimeBetween(userId.orElse(MAIN_USER_ID), startTime, endTime);
     }
 
     /**
      * 保存用户配置
-     * <p>
-     * 更新指定用户的记忆管理配置，自动从上下文中获取用户 ID。
-     * 如果上下文中没有用户 ID，则使用主用户 ID。
-     * </p>
-     *
-     * @param context 工具上下文对象，包含用户信息
-     * @param config  配置
+     * <p>JPA 风格：saveConfig</p>
      */
-    @Tool(name = "memory_config_save", description = "保存用户记忆配置")
-    public void saveUserConfig(ToolContext context,
-                               @ToolParam(description = "配置") MemoryUserConfig config) {
+    @Tool(
+        name = "owl_memory_config_save",
+        description = """
+            保存用户的记忆配置
+            - contextMaxTokenRate: 上下文最大Token占比，范围0.1-1.0
+            - compressRatio: 压缩比，表示保留最近N条记忆
+            - 用户隔离：自动从上下文获取用户ID
+            """
+    )
+    public void saveUserConfig(
+            ToolContext context,
+            @ToolParam(description = "用户配置对象，包含contextMaxTokenRate和compressRatio") MemoryUserConfig config) {
         Optional<String> userId = getUserId(context);
-        memoryRepo.saveUserConfig(userId.orElse(MAIN_USER_ID), config);
+        memoryRepo.saveConfig(userId.orElse(MAIN_USER_ID), config);
+    }
+
+    /**
+     * 解析路径字符串为路径列表
+     * <p>将 "working/P0" 转换为 ["working", "P0"]</p>
+     */
+    private List<String> parsePath(String path) {
+        if (path == null || path.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(path.split("/"))
+                .filter(part -> !part.isBlank())
+                .toList();
     }
 }

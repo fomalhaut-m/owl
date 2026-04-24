@@ -1,16 +1,12 @@
 package com.owl.core;
 
-import com.owl.core.llm.LLMChatRequest;
 import com.owl.core.llm.LLMClient;
 import com.owl.core.llm.LLMAgentResponse;
 import com.owl.core.skills.AgentSkillRepo;
 import lombok.AccessLevel;
 import lombok.Getter;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
 
-import java.util.ArrayList;
-import java.util.List;
+
 
 /**
  * OWL Chat Agent 核心管理类
@@ -102,37 +98,36 @@ public class ChatAgent {
      */
     public String chat(String userMessage) {
         // 从技能仓库加载用户配置
-        String soul = agentSkillRepo.getAgentSkills(userId, "SOUL");
-        String user = agentSkillRepo.getAgentSkills(userId, "USER");
-        String identity = agentSkillRepo.getAgentSkills(userId, "IDENTITY");
-        String tools = agentSkillRepo.getAgentSkills(userId, "TOOLS");
-        String heartbeat = agentSkillRepo.getAgentSkills(userId, "HEARTBEAT");
-
-        // 构建系统消息列表
-        List<Message> systemMessages = new ArrayList<>();
-        if (soul != null && !soul.isEmpty()) {
-            systemMessages.add(new AssistantMessage(soul));
-        }
-        if (user != null && !user.isEmpty()) {
-            systemMessages.add(new AssistantMessage(user));
-        }
-        if (identity != null && !identity.isEmpty()) {
-            systemMessages.add(new AssistantMessage(identity));
-        }
-        if (tools != null && !tools.isEmpty()) {
-            systemMessages.add(new AssistantMessage(tools));
-        }
-        if (heartbeat != null && !heartbeat.isEmpty()) {
-            systemMessages.add(new AssistantMessage(heartbeat));
-        }
+        String soul = agentSkillRepo.findAgentSkillsByUserIdAndType(userId, "SOUL");
+        String user = agentSkillRepo.findAgentSkillsByUserIdAndType(userId, "USER");
+        String identity = agentSkillRepo.findAgentSkillsByUserIdAndType(userId, "IDENTITY");
+        String tools = agentSkillRepo.findAgentSkillsByUserIdAndType(userId, "TOOLS");
+        String heartbeat = agentSkillRepo.findAgentSkillsByUserIdAndType(userId, "HEARTBEAT");
 
         // 调用 LLM 客户端生成回复
         try {
-            // 构建 ChatRequest 对象
-            LLMChatRequest request = LLMChatRequest.of(userMessage, systemMessages);
-            
-            // 调用 LLM 客户端
-            LLMAgentResponse response = llmClient.chat(request);
+            // 使用链式调用构建请求
+            LLMClient.ChatRequestBuilder requestBuilder = llmClient.chat(userMessage);
+
+            // 添加系统消息
+            if (soul != null && !soul.isEmpty()) {
+                requestBuilder.systemMessage(soul);
+            }
+            if (user != null && !user.isEmpty()) {
+                requestBuilder.systemMessage(user);
+            }
+            if (identity != null && !identity.isEmpty()) {
+                requestBuilder.systemMessage(identity);
+            }
+            if (tools != null && !tools.isEmpty()) {
+                requestBuilder.systemMessage(tools);
+            }
+            if (heartbeat != null && !heartbeat.isEmpty()) {
+                requestBuilder.systemMessage(heartbeat);
+            }
+
+            // 调用 LLM
+            LLMAgentResponse response = requestBuilder.call();
 
             // 提取并返回回复内容
             if (response != null && response.isSuccess() && response.content() != null) {

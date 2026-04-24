@@ -15,89 +15,91 @@ public interface MemoryRepo {
 
 
     /**
-     * 保存记忆
+     * 保存记忆（新增或更新）
      * <p>
+     * JPA 风格：persist/save 实体。
      * 将指定用户的记忆内容保存到存储系统中。
      * </p>
      *
      * @param userId  用户唯一标识
-     * @param path    记忆的存储路径，用于定位和检索记忆
+     * @param path    记忆的存储路径（目录部分）
+     * @param name    记忆文件名称
      * @param content 记忆的具体内容
      */
-    void saveMemory(String userId, String path, String content);
+    void save(String userId, List<String> path, String name, String content);
 
     /**
-     * 获取记忆
+     * 根据 ID 查询记忆（findById）
      * <p>
-     * 根据用户 ID 和路径读取对应的记忆内容。
+     * JPA 风格：根据唯一标识查询实体。
+     * 根据用户 ID、路径和文件名读取对应的记忆内容。
      * </p>
      *
      * @param userId 用户唯一标识
-     * @param path   记忆的存储路径
+     * @param path   记忆的存储路径（目录部分）
+     * @param name   记忆文件名称
      * @return 记忆内容，如果不存在则返回 null
      */
-    String getMemory(String userId, String path);
+    String findByUserIdAndPathAndName(String userId, List<String> path, String name);
 
     /**
-     * 删除记忆
+     * 删除记忆（delete）
      * <p>
+     * JPA 风格：delete 实体。
      * 从存储系统中删除指定用户的记忆。
      * </p>
      *
      * @param userId 用户唯一标识
-     * @param path   记忆的存储路径
+     * @param path   记忆的存储路径（目录部分）
+     * @param name   记忆文件名称
      */
-    int deleteMemory(String userId, String path);
+    void delete(String userId, List<String> path, String name);
 
     /**
-     * 获取所有记忆元数据
+     * 查询所有记忆（findAll）
      * <p>
+     * JPA 风格：findAll 查询。
      * 获取指定用户的所有记忆路径及其元数据信息列表。
      * </p>
      *
      * @param userId 用户唯一标识
-     * @return 记忆元数据数组，如果没有记忆则返回空数组
+     * @return 记忆元数据列表，如果没有记忆则返回空列表
      */
-    List<MemoryMetadata> getMemoryPaths(String userId);
+    List<MemoryMetadata> findAllByUserId(String userId);
 
     /**
-     * 获取指定时间范围内的记忆元数据
+     * 根据时间范围查询记忆
+     * <p>JPA 风格：findAllByUserIdAndTimeBetween</p>
+     */
+    List<MemoryMetadata> findAllByUserIdAndTimeBetween(String userId, long startTime, long endTime);
+
+    /**
+     * 根据路径和时间范围查询记忆
+     * <p>JPA 风格：findAllByUserIdAndSubPathAndTimeBetween</p>
+     */
+    List<MemoryMetadata> findAllByUserIdAndSubPathAndTimeBetween(String userId, String subPath, long startTime, long endTime);
+
+    /**
+     * 查询用户配置（findConfig）
      * <p>
-     * 根据时间戳范围筛选并获取指定用户的记忆路径及其元数据信息列表。
-     * </p>
-     *
-     * @param userId    用户唯一标识
-     * @param startTime 起始时间戳（毫秒）
-     * @param endTime   结束时间戳（毫秒）
-     * @return 符合时间范围的记忆元数据数组，如果没有符合条件的记忆则返回空数组
-     */
-    List<MemoryMetadata> getMemoryPaths(String userId, long startTime, long endTime);
-
-    /**
-     * 获取指定path时间范围内的记忆元数据
-     */
-    List<MemoryMetadata> getMemoryPathsByPath(String userId, String rootPath, long startTime, long endTime);
-
-
-    /**
-     * 获取用户配置
-     * <p>
+     * JPA 风格：findByUserId。
      * 读取指定用户的记忆管理配置。
      * </p>
      *
      * @param userId 用户唯一标识
      * @return 用户配置对象，如果不存在则返回 null
      */
-    MemoryUserConfig getUserConfig(String userId);
+    MemoryUserConfig findConfigByUserId(String userId);
 
     /**
-     * 保存用户配置
+     * 保存用户配置（saveConfig）
      * <p>
+     * JPA 风格：save/saveAndFlush。
      * 更新指定用户的记忆管理配置。
      * </p>
      *
      * @param userId 用户唯一标识
-     * @param config 配置 JSON 字符串
+     * @param config 配置对象
      */
-    void saveUserConfig(String userId, MemoryUserConfig config);
+    void saveConfig(String userId, MemoryUserConfig config);
 }

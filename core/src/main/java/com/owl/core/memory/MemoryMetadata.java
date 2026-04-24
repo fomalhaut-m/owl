@@ -5,11 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * 记忆元数据类
  * <p>
- * 封装记忆的元数据信息，包括路径、时间戳和内容大小等属性。
- * 用于提供记忆的详细信息，支持记忆管理和查询功能。
+ * 封装记忆的元数据信息，包括路径（目录结构）、文件名、时间戳和内容大小等属性。
+ * path 表示文件的目录路径列表（如 ["working", "P0"]），
+ * name 表示文件名（如 "test.md"）。
  * </p>
  *
  * @author Owl Team
@@ -21,12 +24,22 @@ import lombok.NoArgsConstructor;
 public class MemoryMetadata {
 
     /**
-     * 记忆存储路径
+     * 记忆存储路径（目录部分）
      * <p>
-     * 用于定位和检索记忆的唯一标识路径。
+     * 文件所在的目录路径，以列表形式存储，便于分类检索。
+     * 例如：["working", "P0"] 表示文件位于 working/P0/ 目录下。
      * </p>
      */
-    private String path;
+    private List<String> path;
+
+    /**
+     * 记忆文件名称
+     * <p>
+     * 记忆文件的名称，包含扩展名。
+     * 例如："test.md"、"20260423_notes.md"。
+     * </p>
+     */
+    private String name;
 
     /**
      * 创建时间戳（毫秒）
