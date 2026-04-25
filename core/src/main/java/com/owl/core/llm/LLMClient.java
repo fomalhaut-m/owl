@@ -5,10 +5,7 @@ import jakarta.validation.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClientResponse;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.ToolResponseMessage;
+import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -428,13 +425,13 @@ public class LLMClient {
          */
         public LLMAgentResponse call() {
             try {
-                // 构建请求规范
-                ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
+                // 构建完整消息列表（历史消息 + 当前用户消息）
+                List<Message> allMessages = new ArrayList<>(messages);
+                allMessages.add(new UserMessage(userMessage));
 
-                // 添加历史消息
-                if (!messages.isEmpty()) {
-                    spec.messages(messages);
-                }
+                // 构建请求规范
+                ChatClient.ChatClientRequestSpec spec = chatClient.prompt();
+                spec.messages(allMessages);
 
                 // 添加工具
                 if (!tools.isEmpty()) {
@@ -468,6 +465,8 @@ public class LLMClient {
 
                 // 执行调用
                 ChatClientResponse springResponse = spec.call().chatClientResponse();
+
+                log.error("LLM 同步调用结果: {}", springResponse);
 
                 // 解析响应
                 if (springResponse != null && springResponse.chatResponse() != null
@@ -512,13 +511,13 @@ public class LLMClient {
          */
         public Flux<LLMAgentResponse> callStream() {
             try {
-                // 构建请求规范
-                ChatClient.ChatClientRequestSpec spec = chatClient.prompt(userMessage);
+                // 构建完整消息列表（历史消息 + 当前用户消息）
+                List<Message> allMessages = new ArrayList<>(messages);
+                allMessages.add(new UserMessage(userMessage));
 
-                // 添加历史消息
-                if (!messages.isEmpty()) {
-                    spec.messages(messages);
-                }
+                // 构建请求规范
+                ChatClient.ChatClientRequestSpec spec = chatClient.prompt();
+                spec.messages(allMessages);
 
                 // 添加工具
                 if (!tools.isEmpty()) {

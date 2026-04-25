@@ -83,7 +83,7 @@ public class AgentTest {
         System.out.println("AI 回复: " + content2);
         System.out.println();
 
-        String followUpMessage = "好的，小智。你能帮我做什么？";
+        String followUpMessage = "好的，小智。你是什么专家?";
 
         LLMAgentResponse response3 = client.chat(followUpMessage)
                 .systemMessage(userConfig.get("USER"))
@@ -93,7 +93,7 @@ public class AgentTest {
                 .systemMessage(userConfig.get("HEARTBEAT"))
                 .assistantMessage(content1)
                 .assistantMessage(content2)
-                .tool(agentTools)
+//                .tool(agentTools)
                 .call();
 
         assertNotNull(response3);
