@@ -1,6 +1,3 @@
-/core/target/**
-/data/**
-
 # Python
 __pycache__/
 *.py[cod]
