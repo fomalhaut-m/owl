@@ -1,11 +1,10 @@
-package com.owl.core.skills.tools;
+package com.owl.core.tools;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -33,8 +32,8 @@ import java.util.*;
  *   <tr><td>owl_memory_list_all</td><td>MemoryTools</td><td>getMemoryPaths</td></tr>
  *   <tr><td>owl_memory_list_by_time</td><td>MemoryTools</td><td>getMemoryPathsByTimeRange</td></tr>
  *   <tr><td>owl_memory_config_save</td><td>MemoryTools</td><td>saveUserConfig</td></tr>
- *   <tr><td>owl_agent_config_set</td><td>AgentTools</td><td>settingUserConfig</td></tr>
- *   <tr><td>owl_agent_config_get</td><td>AgentTools</td><td>getUserConfig</td></tr>
+ *   <tr><td>owl_agent_config_set</td><td>SkillInstanceDefineTools</td><td>settingUserConfig</td></tr>
+ *   <tr><td>owl_agent_config_get</td><td>SkillInstanceDefineTools</td><td>getUserConfig</td></tr>
  *   <tr><td>owl_chat_history_get</td><td>ChatTools</td><td>getChatHistory</td></tr>
  *   <tr><td>owl_time_current_system</td><td>TimeTools</td><td>getCurrentSystemTime</td></tr>
  *   <tr><td>owl_time_current_by_zone</td><td>TimeTools</td><td>getCurrentTimeByZone</td></tr>

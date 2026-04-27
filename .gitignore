@@ -1,4 +1,5 @@
 /core/target/**
+/owl-workspace/target/**
 /data/**
 
 # Python
@@ -8,6 +9,9 @@ __pycache__/
 *.pyd
 .Python
 *.so
+.venv/
+venv/
+env/
 
 # 工作空间用户数据（不提交到 git）
 owl-workspace/users/*
@@ -22,3 +26,17 @@ owl-workspace/users/*
 # OS
 .DS_Store
 Thumbs.db
+
+# 日志
+*.log
+logs/
+
+# Maven
+*.jar
+*.war
+*.ear
+
+# 构建产物
+*.class
+*.o
+*.pyc

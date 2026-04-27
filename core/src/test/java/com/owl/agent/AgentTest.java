@@ -2,8 +2,8 @@ package com.owl.agent;
 
 import com.owl.core.llm.*;
 import com.owl.core.skills.DefaultPrompts;
-import com.owl.core.skills.tools.AgentTools;
-import com.owl.core.skills.AgentSkillRepo;
+import com.owl.core.tools.SkillInstanceDefineTools;
+import com.owl.core.skills.SkillInstanceDefineRepo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +44,7 @@ public class AgentTest {
     @DisplayName("测试Agent chat - 基本对话")
     void testChatBasic() {
         LLMClient client = createHuoshanClient();
-        AgentTools agentTools = getSettingUserAgentTools();
+        SkillInstanceDefineTools agentTools = getSettingUserAgentTools();
 
         LLMAgentResponse response1 = client.chat(DefaultPrompts.BOOTSTRAP_DEFAULT)
                 .systemMessage(userConfig.get("USER"))
@@ -116,8 +116,8 @@ public class AgentTest {
         System.out.println("写入次数 " + userConfigSetCount);
     }
 
-    private static AgentTools getSettingUserAgentTools() {
-        return new AgentTools(new AgentSkillRepo() {
+    private static SkillInstanceDefineTools getSettingUserAgentTools() {
+        return new SkillInstanceDefineTools(new SkillInstanceDefineRepo() {
 
             @Override
             public String findAgentSkillsByUserIdAndType(String userId, String type) {

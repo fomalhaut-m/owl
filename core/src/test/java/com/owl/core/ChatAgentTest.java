@@ -3,7 +3,7 @@ package com.owl.core;
 import com.owl.core.llm.LLMClient;
 import com.owl.core.llm.LLMConfig;
 import com.owl.core.llm.LLMPlatformEnum;
-import com.owl.core.skills.AgentSkillRepo;
+import com.owl.core.skills.SkillInstanceDefineRepo;
 import com.owl.core.skills.DefaultPrompts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +33,7 @@ class ChatAgentTest {
 
     private static final String API_KEY = "fb5c4b70-abb0-4e0b-b390-138ad84c505a";
     private LLMClient llmClient;
-    private AgentSkillRepo skillRepo;
+    private SkillInstanceDefineRepo skillRepo;
     private Map<String, String> userConfig;
 
     /**
@@ -64,8 +64,8 @@ class ChatAgentTest {
     /**
      * 创建技能仓库
      */
-    private AgentSkillRepo createSkillRepo() {
-        return new AgentSkillRepo() {
+    private SkillInstanceDefineRepo createSkillRepo() {
+        return new SkillInstanceDefineRepo() {
             @Override
             public String findAgentSkillsByUserIdAndType(String userId, String type) {
                 return userConfig.get(type);

@@ -1,12 +1,8 @@
 package com.owl.core.llm;
 
-import com.owl.core.skills.tools.TimeTools;
-import com.owl.core.skills.tools.ToolComponent;
+import com.owl.core.tools.TimeTools;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -1,4 +1,4 @@
-package com.owl.core.skills.tools;
+package com.owl.core.tools;
 
 import com.owl.core.work.WorkspaceClient;
 import com.owl.core.work.response.*;

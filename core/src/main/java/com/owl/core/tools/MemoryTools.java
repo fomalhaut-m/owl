@@ -1,4 +1,4 @@
-package com.owl.core.skills.tools;
+package com.owl.core.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.owl.core.memory.MemoryMetadata;

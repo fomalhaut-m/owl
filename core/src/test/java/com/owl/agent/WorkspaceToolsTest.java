@@ -1,7 +1,7 @@
 package com.owl.agent;
 
 import com.owl.core.llm.*;
-import com.owl.core.skills.tools.WorkspaceTools;
+import com.owl.core.tools.WorkspaceTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

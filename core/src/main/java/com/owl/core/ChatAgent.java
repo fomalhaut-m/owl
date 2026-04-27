@@ -2,7 +2,7 @@ package com.owl.core;
 
 import com.owl.core.llm.LLMClient;
 import com.owl.core.llm.LLMAgentResponse;
-import com.owl.core.skills.AgentSkillRepo;
+import com.owl.core.skills.SkillInstanceDefineRepo;
 import lombok.AccessLevel;
 import lombok.Getter;
 
@@ -46,7 +46,7 @@ public class ChatAgent {
 
 
     private final LLMClient llmClient;
-    private final AgentSkillRepo agentSkillRepo;
+    private final SkillInstanceDefineRepo agentSkillRepo;
     @Getter(AccessLevel.PACKAGE)
     private final String sessionId;
     @Getter(AccessLevel.PACKAGE)
@@ -60,7 +60,7 @@ public class ChatAgent {
      * @param sessionId      会话 ID，用于隔离不同的对话历史。如果为 null，将自动生成
      * @param userId         用户 ID，用于隔离不同用户的配置和记忆。如果为 null，使用默认用户
      */
-    private ChatAgent(LLMClient llmClient, AgentSkillRepo agentSkillRepo, String sessionId, String userId) {
+    private ChatAgent(LLMClient llmClient, SkillInstanceDefineRepo agentSkillRepo, String sessionId, String userId) {
         this.llmClient = llmClient;
         this.agentSkillRepo = agentSkillRepo;
         this.sessionId = sessionId != null ? sessionId : generateSessionId();
@@ -217,7 +217,7 @@ public class ChatAgent {
      */
     public static class Builder {
         private final LLMClient llmClient;
-        private AgentSkillRepo agentSkillRepo;
+        private SkillInstanceDefineRepo agentSkillRepo;
         private String sessionId;
         private String userId;
 
@@ -236,7 +236,7 @@ public class ChatAgent {
          * @param agentSkillRepo 技能仓库实例
          * @return Builder 实例，支持链式调用
          */
-        public Builder agentSkillRepo(AgentSkillRepo agentSkillRepo) {
+        public Builder agentSkillRepo(SkillInstanceDefineRepo agentSkillRepo) {
             this.agentSkillRepo = agentSkillRepo;
             return this;
         }

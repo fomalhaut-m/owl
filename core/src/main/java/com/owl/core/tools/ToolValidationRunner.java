@@ -1,11 +1,9 @@
-package com.owl.core.config;
+package com.owl.core.tools;
 
-import com.owl.core.skills.tools.ToolNameValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.stereotype.Component;
 
 /**
  * Tool 名称验证启动器
@@ -16,7 +14,6 @@ import org.springframework.stereotype.Component;
  * @author Owl Team
  * @since 2026-04-23
  */
-@Component
 public class ToolValidationRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ToolValidationRunner.class);

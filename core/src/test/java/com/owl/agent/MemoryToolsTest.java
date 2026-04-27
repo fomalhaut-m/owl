@@ -2,13 +2,10 @@ package com.owl.agent;
 
 import com.owl.core.llm.*;
 import com.owl.core.memory.FileMemoryRepo;
-import com.owl.core.memory.MemoryMetadata;
-import com.owl.core.skills.tools.MemoryTools;
-import org.junit.jupiter.api.AfterEach;
+import com.owl.core.tools.MemoryTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.model.ToolContext;
 
 import java.util.*;
 

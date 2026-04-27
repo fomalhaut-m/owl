@@ -1,6 +1,6 @@
 package com.owl.core.llm;
 
-import com.owl.core.skills.tools.ToolComponent;
+import com.owl.core.tools.ToolComponent;
 import jakarta.validation.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;

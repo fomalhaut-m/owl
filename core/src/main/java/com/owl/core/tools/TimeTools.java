@@ -1,4 +1,4 @@
-package com.owl.core.skills.tools;
+package com.owl.core.tools;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;

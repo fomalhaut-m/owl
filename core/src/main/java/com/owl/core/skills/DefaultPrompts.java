@@ -47,7 +47,6 @@ package com.owl.core.skills;
  *
  * @author OWL Team
  * @version 1.0
- * @see SkillConfig
  * @since 2026-04-16
  */
 public class DefaultPrompts {
