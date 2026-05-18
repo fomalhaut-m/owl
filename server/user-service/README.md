@@ -20,4 +20,17 @@
 - PostgreSQL 数据库
 - BCrypt 密码加密
 ## 服务端口
-- 默认启动端口：8081
+- 默认启动端口：9202
+
+## 接口定义
+- **用户账号管理接口**
+  - 用户业务 - 注册接口: POST `/api/auth/register`
+  - 用户业务 - 登录验证接口: POST `/api/auth/login`
+  - 用户业务 - 信息更新接口: POST `/api/auth/update`   
+  - 用户业务 - 密码重置接口: POST `/api/auth/reset-password`
+  - 用户业务 - 邮箱验证接口: POST `/api/auth/verify-email`
+  - 用户管理 - 用户管理接口: POST `/api/user/query`
+  - Admin 管理接口: GET `/api/auth/admin`
+- **权限管理接口**  
+  - 用户权限更新接口: POST `/api/auth/permissions`
+  - 用户权限查询接口: GET `/api/auth/permissions`
