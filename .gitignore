@@ -1,8 +1,98 @@
-/core/target/**
-/owl-workspace/target/**
-/data/**
+# ================================================
+# Vex-Owl 项目通用 .gitignore
+# ================================================
 
-# Python
+# ================================================
+# Java / Maven 后端构建产物
+# ================================================
+/server/**/target/**
+*.jar
+*.war
+*.ear
+*.class
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# ================================================
+# Flutter / Dart 前端构建产物
+# ================================================
+/app/vex_owl_*/build/
+/app/vex_owl_*/.dart_tool/
+/app/vex_owl_*/.flutter-plugins
+/app/vex_owl_*/.flutter-plugins-dependencies
+/app/vex_owl_*/.packages
+/app/vex_owl_*/pubspec.lock
+/app/*/.packages
+/app/*/.dart_tool/
+/app/*/build/
+/app/*/.flutter-plugins
+/app/*/.flutter-plugins-dependencies
+
+# Flutter specific
+*.lock
+.packages
+.pub-cache/
+.pub/
+/build/
+/.flutter-plugins
+/.flutter-plugins-dependencies
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Dart code generation
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Melos
+/melos.yaml
+/melos_project.yaml
+/.melos.json
+
+# ================================================
+# IDE 配置
+# ================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# ================================================
+# 操作系统缓存
+# ================================================
+Thumbs.db
+Desktop.ini
+*.tmp
+*.bak
+*.cache
+
+# ================================================
+# 日志文件
+# ================================================
+*.log
+logs/
+*.log.*
+*.gz
+
+# ================================================
+# Python（如果有Python脚本）
+# ================================================
 __pycache__/
 *.py[cod]
 *.pyo
@@ -23,63 +113,15 @@ htmlcov/
 .installed.cfg
 *.egg
 
-# 工作空间用户数据（不提交到 git）
+# ================================================
+# 本地数据和工作空间（不提交到 git）
+# ================================================
+/data/**
+/server/data/**
+/server/config-data/**
 owl-workspace/users/*
 !owl-workspace/users/.gitkeep
 
-# Nacos 配置缓存
-data/nacos/
-config-data/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.project
-.classpath
-.settings/
-*.iml
-*.ipr
-*.iws
-
-# OS
-.DS_Store
-Thumbs.db
-Desktop.ini
-*.tmp
-*.bak
-*.cache
-
-# 日志
-*.log
-logs/
-*.log.*
-*.gz
-
-# Maven
-target/
-**/target/**
-*.jar
-*.war
-*.ear
-*.class
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
-
-# 构建产物
-*.class
-*.o
-*.pyc
-build/
-dist/
-*.egg-info/
-*.egg
+# Nacos 配置本地缓存
+server/data/nacos/
+server/config-data/
