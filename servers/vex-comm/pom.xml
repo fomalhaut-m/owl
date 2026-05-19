@@ -18,8 +18,8 @@
     <description>root</description>
 
     <modules>
-       <module>vex-comm-queryer</module>
-       <module>vex-comm-queryer-jpa</module>
+       <module>vex-comm-criteria</module>
+       <module>vex-comm-criteria-jpa</module>
     </modules>
 
 
